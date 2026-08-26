@@ -1,3 +1,13 @@
+export type FieldKey =
+  | "nameEn"
+  | "nameSq"
+  | "nameMk"
+  | "passportNumber"
+  | "issueDate"
+  | "expiryDate"
+  | "nationality"
+  | "birthDate";
+
 export type PassportRecord = {
   id: string;
   hash: string;
@@ -12,9 +22,14 @@ export type PassportRecord = {
   nationality: string;
   birthDate: string;
   createdAt: string;
+  confidence?: Partial<Record<FieldKey, number>>;
+  rawText?: Partial<Record<FieldKey, string>>;
+  scannedBy?: string;
 };
 
 const KEY = "passport-records-v1";
+const AUTH_KEY = "haxhi-auth-v1";
+const SESSION_KEY = "haxhi-session-v1";
 
 export function loadRecords(): PassportRecord[] {
   if (typeof window === "undefined") return [];
@@ -29,6 +44,60 @@ export function loadRecords(): PassportRecord[] {
 export function saveRecords(records: PassportRecord[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(records));
+}
+
+/* ---------- Kredencialet (lokale) ---------- */
+
+export type Credentials = { username: string; password: string };
+
+const DEFAULT_CREDENTIALS: Credentials = { username: "admin", password: "haxhi" };
+
+export function loadCredentials(): Credentials {
+  if (typeof window === "undefined") return DEFAULT_CREDENTIALS;
+  try {
+    const raw = window.localStorage.getItem(AUTH_KEY);
+    return raw ? (JSON.parse(raw) as Credentials) : DEFAULT_CREDENTIALS;
+  } catch {
+    return DEFAULT_CREDENTIALS;
+  }
+}
+
+export function saveCredentials(creds: Credentials) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(AUTH_KEY, JSON.stringify(creds));
+}
+
+export function isSignedIn(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.sessionStorage.getItem(SESSION_KEY) === "1";
+}
+
+export function signIn(username: string, password: string): boolean {
+  const creds = loadCredentials();
+  if (username.trim() === creds.username && password === creds.password) {
+    window.sessionStorage.setItem(SESSION_KEY, "1");
+    return true;
+  }
+  return false;
+}
+
+export function signOut() {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(SESSION_KEY);
+}
+
+/* ---------- Ndihmës ---------- */
+
+export function monthsUntil(dateStr: string): number | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  return (d.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.44);
+}
+
+export function isExpiringSoon(record: PassportRecord): boolean {
+  const m = monthsUntil(record.expiryDate);
+  return m !== null && m < 3;
 }
 
 export async function hashDataUrl(dataUrl: string): Promise<string> {
