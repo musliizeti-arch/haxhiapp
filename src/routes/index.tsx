@@ -125,7 +125,7 @@ function Index() {
       Skedari: r.fileName,
     }));
     const sheet = XLSX.utils.json_to_sheet(rows);
-    sheet["!cols"] = Object.keys(rows[0]).map(() => ({ wch: 22 }));
+    sheet["!cols"] = Object.keys(rows[0] ?? {}).map(() => ({ wch: 22 }));
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, sheet, "Pasaportat");
     XLSX.writeFile(book, `pasaportat-${new Date().toISOString().slice(0, 10)}.xlsx`);
