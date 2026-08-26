@@ -5,11 +5,39 @@ const inputSchema = z.object({
   imageDataUrl: z.string().min(20),
 });
 
+const FIELDS = [
+  ["name_en", "nameEn"],
+  ["name_sq", "nameSq"],
+  ["name_mk", "nameMk"],
+  ["passport_number", "passportNumber"],
+  ["issue_date", "issueDate"],
+  ["expiry_date", "expiryDate"],
+  ["nationality", "nationality"],
+  ["birth_date", "birthDate"],
+] as const;
+
+function fieldSchema(description: string) {
+  return {
+    type: "object",
+    description,
+    properties: {
+      value: { type: "string", description: "Normalized value (dates as YYYY-MM-DD)" },
+      raw_text: { type: "string", description: "Exact text as printed on the passport image" },
+      confidence: { type: "number", description: "Confidence 0-1 for this field" },
+    },
+    required: ["value", "raw_text", "confidence"],
+    additionalProperties: false,
+  };
+}
+
 export const extractPassport = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => inputSchema.parse(data))
   .handler(async ({ data }) => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI nuk eshte i konfiguruar.");
+
+    const properties: Record<string, unknown> = {};
+    for (const [snake] of FIELDS) properties[snake] = fieldSchema(snake);
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -28,7 +56,9 @@ export const extractPassport = createServerFn({ method: "POST" })
               "name_en = exactly as latin letters on the passport (English/international), " +
               "name_sq = Albanian spelling in latin letters (use Albanian orthography, e.g. Ç, Ë), " +
               "name_mk = Macedonian spelling in Cyrillic script (transliterate the same name). " +
-              "Dates must be ISO format YYYY-MM-DD. Use empty string when unreadable. Never invent data.",
+              "For every field return: value (dates ISO YYYY-MM-DD), raw_text (the literal characters you read on the image, " +
+              "or the MRZ segment used), and confidence between 0 and 1 reflecting how clearly you could read it. " +
+              "Use empty string and confidence 0 when unreadable. Never invent data.",
           },
           {
             role: "user",
@@ -43,27 +73,11 @@ export const extractPassport = createServerFn({ method: "POST" })
             type: "function",
             function: {
               name: "save_passport",
-              description: "Save extracted passport data",
+              description: "Save extracted passport data with per-field confidence",
               parameters: {
                 type: "object",
-                properties: {
-                  name_en: { type: "string" },
-                  name_sq: { type: "string" },
-                  name_mk: { type: "string" },
-                  passport_number: { type: "string" },
-                  issue_date: { type: "string" },
-                  expiry_date: { type: "string" },
-                  nationality: { type: "string" },
-                  birth_date: { type: "string" },
-                },
-                required: [
-                  "name_en",
-                  "name_sq",
-                  "name_mk",
-                  "passport_number",
-                  "issue_date",
-                  "expiry_date",
-                ],
+                properties,
+                required: FIELDS.map(([snake]) => snake),
                 additionalProperties: false,
               },
             },
@@ -82,14 +96,34 @@ export const extractPassport = createServerFn({ method: "POST" })
     if (!call) throw new Error("Nuk u lexuan te dhena nga pasaporta.");
     const parsed = JSON.parse(call.function.arguments ?? "{}");
 
+    const values: Record<string, string> = {};
+    const confidence: Record<string, number> = {};
+    const rawText: Record<string, string> = {};
+
+    for (const [snake, camel] of FIELDS) {
+      const entry = parsed?.[snake];
+      if (entry && typeof entry === "object") {
+        values[camel] = String(entry.value ?? "");
+        rawText[camel] = String(entry.raw_text ?? "");
+        const c = Number(entry.confidence);
+        confidence[camel] = Number.isFinite(c) ? Math.max(0, Math.min(1, c)) : 0;
+      } else {
+        values[camel] = String(entry ?? "");
+        rawText[camel] = "";
+        confidence[camel] = 0;
+      }
+    }
+
     return {
-      nameEn: String(parsed.name_en ?? ""),
-      nameSq: String(parsed.name_sq ?? ""),
-      nameMk: String(parsed.name_mk ?? ""),
-      passportNumber: String(parsed.passport_number ?? ""),
-      issueDate: String(parsed.issue_date ?? ""),
-      expiryDate: String(parsed.expiry_date ?? ""),
-      nationality: String(parsed.nationality ?? ""),
-      birthDate: String(parsed.birth_date ?? ""),
+      nameEn: values["nameEn"] ?? "",
+      nameSq: values["nameSq"] ?? "",
+      nameMk: values["nameMk"] ?? "",
+      passportNumber: values["passportNumber"] ?? "",
+      issueDate: values["issueDate"] ?? "",
+      expiryDate: values["expiryDate"] ?? "",
+      nationality: values["nationality"] ?? "",
+      birthDate: values["birthDate"] ?? "",
+      confidence,
+      rawText,
     };
   });
