@@ -19,6 +19,8 @@
  */
 
 @theme inline {
+  --font-sans: var(--font-sans);
+  --shadow-panel: var(--shadow-panel);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
