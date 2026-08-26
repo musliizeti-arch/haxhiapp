@@ -23,7 +23,7 @@ const fields: { key: FieldKey; label: string; type?: string }[] = [
   { key: "birthDate", label: "Datëlindja", type: "date" },
 ];
 
-export function ConfidenceBadge({ value }: { value?: number }) {
+export function ConfidenceBadge({ value }: { value: number | undefined }) {
   if (value === undefined) return null;
   const pct = Math.round(value * 100);
   const tone =
