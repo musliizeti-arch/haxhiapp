@@ -462,10 +462,10 @@ function Cell({
   mono,
 }: {
   value: string;
-  conf?: number;
-  raw?: string;
-  bold?: boolean;
-  mono?: boolean;
+  conf?: number | undefined;
+  raw?: string | undefined;
+  bold?: boolean | undefined;
+  mono?: boolean | undefined;
 }) {
   return (
     <TableCell className="align-top">
