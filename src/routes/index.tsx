@@ -5,8 +5,11 @@ import * as XLSX from "xlsx";
 import {
   Camera,
   FileSpreadsheet,
+  Images,
+  ListChecks,
   Loader2,
   Pencil,
+  Users,
   Search,
   Settings,
   Trash2,
