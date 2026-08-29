@@ -137,3 +137,39 @@ export async function shrinkImage(dataUrl: string, maxSize = 1600): Promise<stri
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   return canvas.toDataURL("image/jpeg", 0.85);
 }
+
+/* ---------- Prerja e fotografisë së pasaportës ---------- */
+
+export async function cropPhoto(
+  dataUrl: string,
+  box: PhotoBox | null | undefined,
+  outHeight = 520,
+): Promise<string | undefined> {
+  if (!box) return undefined;
+  try {
+    const img = new Image();
+    img.src = dataUrl;
+    await new Promise((res, rej) => {
+      img.onload = res;
+      img.onerror = rej;
+    });
+    const pad = 0.04;
+    const x = Math.max(0, (box.x - pad * box.w) * img.width);
+    const y = Math.max(0, (box.y - pad * box.h) * img.height);
+    const w = Math.min(img.width - x, box.w * (1 + pad * 2) * img.width);
+    const h = Math.min(img.height - y, box.h * (1 + pad * 2) * img.height);
+    if (w < 20 || h < 20) return undefined;
+    const scale = Math.min(1, outHeight / h);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return undefined;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, x, y, w, h, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.9);
+  } catch {
+    return undefined;
+  }
+}
