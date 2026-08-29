@@ -8,11 +8,15 @@ export type FieldKey =
   | "nationality"
   | "birthDate";
 
+export type PhotoBox = { x: number; y: number; w: number; h: number };
+
 export type PassportRecord = {
   id: string;
   hash: string;
   fileName: string;
   thumbnail: string;
+  photo?: string;
+  photoBox?: PhotoBox | null;
   nameEn: string;
   nameSq: string;
   nameMk: string;
