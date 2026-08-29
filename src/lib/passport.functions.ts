@@ -38,6 +38,19 @@ export const extractPassport = createServerFn({ method: "POST" })
 
     const properties: Record<string, unknown> = {};
     for (const [snake] of FIELDS) properties[snake] = fieldSchema(snake);
+    properties["photo_box"] = {
+      type: "object",
+      description:
+        "Bounding box of the holder's portrait photo on the passport image, normalized 0-1 relative to image width/height. Use zeros if no photo is visible.",
+      properties: {
+        x: { type: "number", description: "Left edge 0-1" },
+        y: { type: "number", description: "Top edge 0-1" },
+        w: { type: "number", description: "Width 0-1" },
+        h: { type: "number", description: "Height 0-1" },
+      },
+      required: ["x", "y", "w", "h"],
+      additionalProperties: false,
+    };
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -77,7 +90,7 @@ export const extractPassport = createServerFn({ method: "POST" })
               parameters: {
                 type: "object",
                 properties,
-                required: FIELDS.map(([snake]) => snake),
+                required: [...FIELDS.map(([snake]) => snake), "photo_box"],
                 additionalProperties: false,
               },
             },
@@ -125,5 +138,12 @@ export const extractPassport = createServerFn({ method: "POST" })
       birthDate: values["birthDate"] ?? "",
       confidence,
       rawText,
+      photoBox: (() => {
+        const b = parsed?.["photo_box"];
+        const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+        if (!b || typeof b !== "object") return null;
+        const box = { x: num(b.x), y: num(b.y), w: num(b.w), h: num(b.h) };
+        return box.w > 0.02 && box.h > 0.02 ? box : null;
+      })(),
     };
   });

@@ -5,8 +5,11 @@ import * as XLSX from "xlsx";
 import {
   Camera,
   FileSpreadsheet,
+  Images,
+  ListChecks,
   Loader2,
   Pencil,
+  Users,
   Search,
   Settings,
   Trash2,
@@ -49,8 +52,10 @@ import { RecordEditor, ConfidenceBadge } from "@/components/RecordEditor";
 import { SplashScreen } from "@/components/SplashScreen";
 import { LoginGate, useAuthed } from "@/components/LoginGate";
 import { extractPassport } from "@/lib/passport.functions";
+import { openPhotoSheet } from "@/lib/photo-sheet";
 import { cn } from "@/lib/utils";
 import {
+  cropPhoto,
   fileToDataUrl,
   hashDataUrl,
   isExpiringSoon,
@@ -101,6 +106,7 @@ function IndexPage() {
 function Index() {
   const [records, setRecords] = useState<PassportRecord[]>([]);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [query, setQuery] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
   const [editing, setEditing] = useState<PassportRecord | null>(null);
@@ -115,25 +121,36 @@ function Index() {
     saveRecords(next);
   }
 
+  /** Lexon një foto dhe e kthen si regjistrim; hedh gabim nëse dështon. */
+  async function buildRecord(rawDataUrl: string, fileName: string, seen: Set<string>) {
+    const imageDataUrl = await shrinkImage(rawDataUrl);
+    const hash = await hashDataUrl(imageDataUrl);
+    if (seen.has(hash)) return null;
+    const data = await runExtract({ data: { imageDataUrl } });
+    const photo = await cropPhoto(imageDataUrl, data.photoBox);
+    seen.add(hash);
+    const record: PassportRecord = {
+      id: crypto.randomUUID(),
+      hash,
+      fileName,
+      thumbnail: await shrinkImage(imageDataUrl, 220),
+      createdAt: new Date().toISOString(),
+      ...data,
+      ...(photo ? { photo } : {}),
+    };
+    return record;
+  }
+
   async function process(rawDataUrl: string, fileName: string) {
     setBusy(true);
     try {
-      const imageDataUrl = await shrinkImage(rawDataUrl);
-      const hash = await hashDataUrl(imageDataUrl);
       const existing = loadRecords();
-      if (existing.some((r) => r.hash === hash)) {
+      const seen = new Set(existing.map((r) => r.hash));
+      const record = await buildRecord(rawDataUrl, fileName, seen);
+      if (!record) {
         toast.warning("Kjo foto është skanuar më parë — u anashkalua.");
         return;
       }
-      const data = await runExtract({ data: { imageDataUrl } });
-      const record: PassportRecord = {
-        id: crypto.randomUUID(),
-        hash,
-        fileName,
-        thumbnail: await shrinkImage(imageDataUrl, 220),
-        createdAt: new Date().toISOString(),
-        ...data,
-      };
       persist([record, ...existing]);
       toast.success(`U lexua: ${record.nameEn || "pasaportë e re"}`);
     } catch (e) {
@@ -143,13 +160,64 @@ function Index() {
     }
   }
 
+  /** Ngarkim masiv — pa limit fotosh, me deduplikim sipas së njëjtës foto. */
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;
-    for (const file of Array.from(files)) {
-      const dataUrl = await fileToDataUrl(file);
-      await process(dataUrl, file.name);
+    const list = Array.from(files);
+    setBusy(true);
+    setProgress({ done: 0, total: list.length });
+    const existing = loadRecords();
+    const seen = new Set(existing.map((r) => r.hash));
+    const added: PassportRecord[] = [];
+    let duplicates = 0;
+    let failed = 0;
+
+    const CONCURRENCY = 3;
+    let cursor = 0;
+    async function worker() {
+      while (cursor < list.length) {
+        const index = cursor++;
+        const file = list[index]!;
+        try {
+          const dataUrl = await fileToDataUrl(file);
+          const record = await buildRecord(dataUrl, file.name, seen);
+          if (record) added.push(record);
+          else duplicates++;
+        } catch {
+          failed++;
+        }
+        setProgress({ done: index + 1, total: list.length });
+        const snapshot = [...added].reverse();
+        setRecords([...snapshot, ...existing]);
+      }
     }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, list.length) }, worker));
+
+    persist([...[...added].reverse(), ...existing]);
+    setProgress(null);
+    setBusy(false);
     if (fileRef.current) fileRef.current.value = "";
+    toast.success(
+      `U shtuan ${added.length} pasaporta` +
+        (duplicates ? ` • ${duplicates} të dyfishta u anashkaluan` : "") +
+        (failed ? ` • ${failed} dështuan` : ""),
+    );
+  }
+
+  function exportPhotos() {
+    const items = records
+      .map((r) => ({
+        src: r.photo || r.thumbnail,
+        name: r.nameSq || r.nameEn || r.nameMk || "—",
+        subtitle: r.passportNumber,
+      }))
+      .filter((i) => !!i.src);
+    if (!items.length) {
+      toast.warning("Nuk ka fotografi për eksport.");
+      return;
+    }
+    const ok = openPhotoSheet(items);
+    if (!ok) toast.error("Shfletuesi bllokoi skedën e re. Lejoni dritaret pop-up.");
   }
 
   const filtered = useMemo(() => {
@@ -210,6 +278,21 @@ function Index() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <nav className="mr-2 hidden items-center gap-1 md:flex">
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/lista">
+                  <ListChecks /> Lista e emrave
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/udheheqesit">
+                  <Users /> Udhëheqësit fetarë
+                </Link>
+              </Button>
+            </nav>
+            <Button variant="outline" onClick={exportPhotos} disabled={!records.length}>
+              <Images /> Eksporto fotot
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" disabled={!records.length}>
@@ -262,7 +345,8 @@ function Index() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Zgjidhni një ose më shumë foto. Fotot e dyfishta anashkalohen automatikisht.
+                  Ngarkim masiv pa limit — zgjidhni sa foto të doni njëherësh. Fotot e njëjta
+                  anashkalohen automatikisht.
                 </p>
                 <input
                   ref={fileRef}
@@ -285,8 +369,21 @@ function Index() {
           </div>
 
           {busy && (
-            <div className="flex items-center gap-2 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Duke lexuar pasaportën…
+            <div className="space-y-2 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                {progress
+                  ? `Duke lexuar ${progress.done}/${progress.total} pasaporta…`
+                  : "Duke lexuar pasaportën…"}
+              </div>
+              {progress && (
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${(progress.done / progress.total) * 100}%` }}
+                  />
+                </div>
+              )}
             </div>
           )}
 
