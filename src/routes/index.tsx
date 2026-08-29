@@ -115,25 +115,36 @@ function Index() {
     saveRecords(next);
   }
 
+  /** Lexon një foto dhe e kthen si regjistrim; hedh gabim nëse dështon. */
+  async function buildRecord(rawDataUrl: string, fileName: string, seen: Set<string>) {
+    const imageDataUrl = await shrinkImage(rawDataUrl);
+    const hash = await hashDataUrl(imageDataUrl);
+    if (seen.has(hash)) return null;
+    const data = await runExtract({ data: { imageDataUrl } });
+    const photo = await cropPhoto(imageDataUrl, data.photoBox);
+    seen.add(hash);
+    const record: PassportRecord = {
+      id: crypto.randomUUID(),
+      hash,
+      fileName,
+      thumbnail: await shrinkImage(imageDataUrl, 220),
+      createdAt: new Date().toISOString(),
+      ...data,
+      ...(photo ? { photo } : {}),
+    };
+    return record;
+  }
+
   async function process(rawDataUrl: string, fileName: string) {
     setBusy(true);
     try {
-      const imageDataUrl = await shrinkImage(rawDataUrl);
-      const hash = await hashDataUrl(imageDataUrl);
       const existing = loadRecords();
-      if (existing.some((r) => r.hash === hash)) {
+      const seen = new Set(existing.map((r) => r.hash));
+      const record = await buildRecord(rawDataUrl, fileName, seen);
+      if (!record) {
         toast.warning("Kjo foto është skanuar më parë — u anashkalua.");
         return;
       }
-      const data = await runExtract({ data: { imageDataUrl } });
-      const record: PassportRecord = {
-        id: crypto.randomUUID(),
-        hash,
-        fileName,
-        thumbnail: await shrinkImage(imageDataUrl, 220),
-        createdAt: new Date().toISOString(),
-        ...data,
-      };
       persist([record, ...existing]);
       toast.success(`U lexua: ${record.nameEn || "pasaportë e re"}`);
     } catch (e) {
@@ -143,13 +154,64 @@ function Index() {
     }
   }
 
+  /** Ngarkim masiv — pa limit fotosh, me deduplikim sipas së njëjtës foto. */
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;
-    for (const file of Array.from(files)) {
-      const dataUrl = await fileToDataUrl(file);
-      await process(dataUrl, file.name);
+    const list = Array.from(files);
+    setBusy(true);
+    setProgress({ done: 0, total: list.length });
+    const existing = loadRecords();
+    const seen = new Set(existing.map((r) => r.hash));
+    const added: PassportRecord[] = [];
+    let duplicates = 0;
+    let failed = 0;
+
+    const CONCURRENCY = 3;
+    let cursor = 0;
+    async function worker() {
+      while (cursor < list.length) {
+        const index = cursor++;
+        const file = list[index]!;
+        try {
+          const dataUrl = await fileToDataUrl(file);
+          const record = await buildRecord(dataUrl, file.name, seen);
+          if (record) added.push(record);
+          else duplicates++;
+        } catch {
+          failed++;
+        }
+        setProgress({ done: index + 1, total: list.length });
+        const snapshot = [...added].reverse();
+        setRecords([...snapshot, ...existing]);
+      }
     }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, list.length) }, worker));
+
+    persist([...[...added].reverse(), ...existing]);
+    setProgress(null);
+    setBusy(false);
     if (fileRef.current) fileRef.current.value = "";
+    toast.success(
+      `U shtuan ${added.length} pasaporta` +
+        (duplicates ? ` • ${duplicates} të dyfishta u anashkaluan` : "") +
+        (failed ? ` • ${failed} dështuan` : ""),
+    );
+  }
+
+  function exportPhotos() {
+    const items = records
+      .map((r) => ({
+        src: r.photo || r.thumbnail,
+        name: r.nameSq || r.nameEn || r.nameMk || "—",
+        subtitle: r.passportNumber,
+      }))
+      .filter((i) => !!i.src);
+    if (!items.length) {
+      toast.warning("Nuk ka fotografi për eksport.");
+      return;
+    }
+    const ok = openPhotoSheet(items);
+    if (!ok) toast.error("Shfletuesi bllokoi skedën e re. Lejoni dritaret pop-up.");
   }
 
   const filtered = useMemo(() => {
