@@ -90,7 +90,7 @@ export const extractPassport = createServerFn({ method: "POST" })
               parameters: {
                 type: "object",
                 properties,
-                required: FIELDS.map(([snake]) => snake),
+                required: [...FIELDS.map(([snake]) => snake), "photo_box"],
                 additionalProperties: false,
               },
             },
