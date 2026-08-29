@@ -275,6 +275,21 @@ function Index() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <nav className="mr-2 hidden items-center gap-1 md:flex">
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/lista">
+                  <ListChecks /> Lista e emrave
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/udheheqesit">
+                  <Users /> Udhëheqësit fetarë
+                </Link>
+              </Button>
+            </nav>
+            <Button variant="outline" onClick={exportPhotos} disabled={!records.length}>
+              <Images /> Eksporto fotot
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" disabled={!records.length}>
@@ -327,7 +342,8 @@ function Index() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Zgjidhni një ose më shumë foto. Fotot e dyfishta anashkalohen automatikisht.
+                  Ngarkim masiv pa limit — zgjidhni sa foto të doni njëherësh. Fotot e njëjta
+                  anashkalohen automatikisht.
                 </p>
                 <input
                   ref={fileRef}
@@ -350,8 +366,21 @@ function Index() {
           </div>
 
           {busy && (
-            <div className="flex items-center gap-2 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Duke lexuar pasaportën…
+            <div className="space-y-2 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                {progress
+                  ? `Duke lexuar ${progress.done}/${progress.total} pasaporta…`
+                  : "Duke lexuar pasaportën…"}
+              </div>
+              {progress && (
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${(progress.done / progress.total) * 100}%` }}
+                  />
+                </div>
+              )}
             </div>
           )}
 
