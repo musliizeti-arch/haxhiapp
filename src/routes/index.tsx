@@ -49,8 +49,10 @@ import { RecordEditor, ConfidenceBadge } from "@/components/RecordEditor";
 import { SplashScreen } from "@/components/SplashScreen";
 import { LoginGate, useAuthed } from "@/components/LoginGate";
 import { extractPassport } from "@/lib/passport.functions";
+import { openPhotoSheet } from "@/lib/photo-sheet";
 import { cn } from "@/lib/utils";
 import {
+  cropPhoto,
   fileToDataUrl,
   hashDataUrl,
   isExpiringSoon,
@@ -101,6 +103,7 @@ function IndexPage() {
 function Index() {
   const [records, setRecords] = useState<PassportRecord[]>([]);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [query, setQuery] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
   const [editing, setEditing] = useState<PassportRecord | null>(null);
