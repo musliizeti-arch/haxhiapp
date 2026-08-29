@@ -38,6 +38,19 @@ export const extractPassport = createServerFn({ method: "POST" })
 
     const properties: Record<string, unknown> = {};
     for (const [snake] of FIELDS) properties[snake] = fieldSchema(snake);
+    properties["photo_box"] = {
+      type: "object",
+      description:
+        "Bounding box of the holder's portrait photo on the passport image, normalized 0-1 relative to image width/height. Use zeros if no photo is visible.",
+      properties: {
+        x: { type: "number", description: "Left edge 0-1" },
+        y: { type: "number", description: "Top edge 0-1" },
+        w: { type: "number", description: "Width 0-1" },
+        h: { type: "number", description: "Height 0-1" },
+      },
+      required: ["x", "y", "w", "h"],
+      additionalProperties: false,
+    };
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
