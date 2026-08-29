@@ -138,5 +138,12 @@ export const extractPassport = createServerFn({ method: "POST" })
       birthDate: values["birthDate"] ?? "",
       confidence,
       rawText,
+      photoBox: (() => {
+        const b = parsed?.["photo_box"];
+        const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+        if (!b || typeof b !== "object") return null;
+        const box = { x: num(b.x), y: num(b.y), w: num(b.w), h: num(b.h) };
+        return box.w > 0.02 && box.h > 0.02 ? box : null;
+      })(),
     };
   });
