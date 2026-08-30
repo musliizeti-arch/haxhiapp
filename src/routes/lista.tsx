@@ -38,7 +38,7 @@ export const Route = createFileRoute("/lista")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: RosterPage;
+  component: RosterPage,
 });
 
 function RosterPage() {
