@@ -10,11 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ListaRouteImport } from './routes/lista'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as UdheheqesitRouteImport } from './routes/udheheqesit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListaRoute = ListaRouteImport.update({
+  id: '/lista',
+  path: '/lista',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -22,31 +29,44 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UdheheqesitRoute = UdheheqesitRouteImport.update({
+  id: '/udheheqesit',
+  path: '/udheheqesit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/lista': typeof ListaRoute
   '/settings': typeof SettingsRoute
+  '/udheheqesit': typeof UdheheqesitRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/lista': typeof ListaRoute
   '/settings': typeof SettingsRoute
+  '/udheheqesit': typeof UdheheqesitRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/lista': typeof ListaRoute
   '/settings': typeof SettingsRoute
+  '/udheheqesit': typeof UdheheqesitRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/settings'
+  fullPaths: '/' | '/lista' | '/settings' | '/udheheqesit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/settings'
-  id: '__root__' | '/' | '/settings'
+  to: '/' | '/lista' | '/settings' | '/udheheqesit'
+  id: '__root__' | '/' | '/lista' | '/settings' | '/udheheqesit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ListaRoute: typeof ListaRoute
   SettingsRoute: typeof SettingsRoute
+  UdheheqesitRoute: typeof UdheheqesitRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +78,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lista': {
+      id: '/lista'
+      path: '/lista'
+      fullPath: '/lista'
+      preLoaderRoute: typeof ListaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -65,12 +92,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/udheheqesit': {
+      id: '/udheheqesit'
+      path: '/udheheqesit'
+      fullPath: '/udheheqesit'
+      preLoaderRoute: typeof UdheheqesitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ListaRoute: ListaRoute,
   SettingsRoute: SettingsRoute,
+  UdheheqesitRoute: UdheheqesitRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
