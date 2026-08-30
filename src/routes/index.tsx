@@ -2,20 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import * as XLSX from "xlsx";
-import {
-  Camera,
-  FileSpreadsheet,
-  Images,
-  ListChecks,
-  Loader2,
-  Pencil,
-  Users,
-  Search,
-  Settings,
-  Trash2,
-  TriangleAlert,
-  Upload,
-} from "lucide-react";
+import { Camera, FileSpreadsheet, Images, ListChecks, Loader2, Pencil, Plane, Search, Settings, Trash2, TriangleAlert, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -282,6 +269,11 @@ function Index() {
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/lista">
                   <ListChecks /> Lista e emrave
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/grupet">
+                  <Plane /> Grupe / Fluturime
                 </Link>
               </Button>
               <Button variant="ghost" size="sm" asChild>
