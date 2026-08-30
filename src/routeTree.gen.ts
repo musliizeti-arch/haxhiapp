@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GrupetRouteImport } from './routes/grupet'
 import { Route as ListaRouteImport } from './routes/lista'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as UdheheqesitRouteImport } from './routes/udheheqesit'
@@ -17,6 +18,11 @@ import { Route as UdheheqesitRouteImport } from './routes/udheheqesit'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GrupetRoute = GrupetRouteImport.update({
+  id: '/grupet',
+  path: '/grupet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ListaRoute = ListaRouteImport.update({
@@ -37,12 +43,14 @@ const UdheheqesitRoute = UdheheqesitRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/grupet': typeof GrupetRoute
   '/lista': typeof ListaRoute
   '/settings': typeof SettingsRoute
   '/udheheqesit': typeof UdheheqesitRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/grupet': typeof GrupetRoute
   '/lista': typeof ListaRoute
   '/settings': typeof SettingsRoute
   '/udheheqesit': typeof UdheheqesitRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/grupet': typeof GrupetRoute
   '/lista': typeof ListaRoute
   '/settings': typeof SettingsRoute
   '/udheheqesit': typeof UdheheqesitRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/lista' | '/settings' | '/udheheqesit'
+  fullPaths: '/' | '/grupet' | '/lista' | '/settings' | '/udheheqesit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/lista' | '/settings' | '/udheheqesit'
-  id: '__root__' | '/' | '/lista' | '/settings' | '/udheheqesit'
+  to: '/' | '/grupet' | '/lista' | '/settings' | '/udheheqesit'
+  id: '__root__' | '/' | '/grupet' | '/lista' | '/settings' | '/udheheqesit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  GrupetRoute: typeof GrupetRoute
   ListaRoute: typeof ListaRoute
   SettingsRoute: typeof SettingsRoute
   UdheheqesitRoute: typeof UdheheqesitRoute
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/grupet': {
+      id: '/grupet'
+      path: '/grupet'
+      fullPath: '/grupet'
+      preLoaderRoute: typeof GrupetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lista': {
@@ -104,6 +121,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  GrupetRoute: GrupetRoute,
   ListaRoute: ListaRoute,
   SettingsRoute: SettingsRoute,
   UdheheqesitRoute: UdheheqesitRoute,

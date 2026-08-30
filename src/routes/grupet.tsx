@@ -117,7 +117,10 @@ function GroupsContent() {
   }
 
   function addFlight() {
-    if (!flightForm.code.trim()) return toast.error("Shkruani numrin e fluturimit.");
+    if (!flightForm.code.trim()) {
+      toast.error("Shkruani numrin e fluturimit.");
+      return;
+    }
     const next = [...flights, { id: crypto.randomUUID(), ...flightForm }];
     setFlights(next);
     saveFlights(next);
@@ -125,7 +128,10 @@ function GroupsContent() {
   }
 
   function addRoom() {
-    if (!roomForm.number.trim()) return toast.error("Shkruani numrin e dhomës.");
+    if (!roomForm.number.trim()) {
+      toast.error("Shkruani numrin e dhomës.");
+      return;
+    }
     const next: Room[] = [
       ...rooms,
       {
@@ -159,7 +165,10 @@ function GroupsContent() {
   }
 
   function exportFlights() {
-    if (!flights.length) return toast.error("Nuk ka fluturime.");
+    if (!flights.length) {
+      toast.error("Nuk ka fluturime.");
+      return;
+    }
     const book = XLSX.utils.book_new();
     for (const f of flights) {
       const rows = Object.entries(flightAssign)
@@ -186,7 +195,10 @@ function GroupsContent() {
   }
 
   function exportRooms() {
-    if (!rooms.length) return toast.error("Nuk ka dhoma.");
+    if (!rooms.length) {
+      toast.error("Nuk ka dhoma.");
+      return;
+    }
     const rows = rooms.flatMap((r) => {
       const members = Object.entries(roomAssign).filter(([, rid]) => rid === r.id);
       if (!members.length)
