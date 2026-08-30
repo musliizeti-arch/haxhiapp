@@ -264,8 +264,8 @@ function Index() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <nav className="mr-2 hidden items-center gap-1 md:flex">
+          <div className="flex flex-wrap items-center gap-2">
+            <nav className="mr-2 flex flex-wrap items-center gap-1">
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/lista">
                   <ListChecks /> Lista e emrave
