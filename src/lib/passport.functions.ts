@@ -68,7 +68,10 @@ export const extractPassport = createServerFn({ method: "POST" })
               "Return the full name (given names + surname) in three scripts/languages: " +
               "name_en = exactly as latin letters on the passport (English/international), " +
               "name_sq = Albanian spelling in latin letters (use Albanian orthography, e.g. Ç, Ë), " +
-              "name_mk = Macedonian spelling in Cyrillic script (transliterate the same name). " +
+              "name_mk = ALWAYS the Macedonian Cyrillic form of the same name. The passport may be from any country " +
+              "and in any language or script (Latin, Cyrillic, Arabic, Turkish, etc.) - regardless of the passport language " +
+              "you must always transliterate the holder's name into Macedonian Cyrillic and never leave name_mk empty " +
+              "when the name is readable. Same rule for name_sq (always Albanian latin orthography). " +
               "For every field return: value (dates ISO YYYY-MM-DD), raw_text (the literal characters you read on the image, " +
               "or the MRZ segment used), and confidence between 0 and 1 reflecting how clearly you could read it. " +
               "Use empty string and confidence 0 when unreadable. Never invent data.",
