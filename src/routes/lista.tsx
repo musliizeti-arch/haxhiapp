@@ -88,16 +88,44 @@ function RosterContent() {
     return set;
   }, [records]);
 
+  async function readRows(file: File): Promise<Record<string, unknown>[]> {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+    if (ext === "json") {
+      const data = JSON.parse(await file.text());
+      const list = Array.isArray(data) ? data : Array.isArray(data?.rows) ? data.rows : [];
+      return list.map((item: unknown) =>
+        typeof item === "string" ? { Emri: item } : (item as Record<string, unknown>),
+      );
+    }
+
+    if (ext === "txt" || ext === "tsv") {
+      const text = await file.text();
+      const lines = text
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+      if (lines.some((l) => l.includes("\t"))) {
+        const book = XLSX.read(text, { type: "string", FS: "\t" });
+        const sheet = book.Sheets[book.SheetNames[0]!]!;
+        return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+      }
+      return lines.map((l) => ({ Emri: l }));
+    }
+
+    const buffer = await file.arrayBuffer();
+    const book = XLSX.read(buffer, { type: "array" });
+    const sheetName = book.SheetNames[0];
+    if (!sheetName) throw new Error("Skedari është bosh.");
+    return XLSX.utils.sheet_to_json<Record<string, unknown>>(book.Sheets[sheetName]!, {
+      defval: "",
+    });
+  }
+
   async function onFile(file: File | undefined) {
     if (!file) return;
     try {
-      const buffer = await file.arrayBuffer();
-      const book = XLSX.read(buffer, { type: "array" });
-      const sheetName = book.SheetNames[0];
-      if (!sheetName) throw new Error("Skedari është bosh.");
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(book.Sheets[sheetName]!, {
-        defval: "",
-      });
+      const rows = await readRows(file);
       const imported: RosterPerson[] = [];
       const existing = new Set(people.map((p) => normalize(p.name)));
       for (const row of rows) {
