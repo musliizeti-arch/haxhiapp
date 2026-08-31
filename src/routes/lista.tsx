@@ -195,13 +195,14 @@ function RosterContent() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Skedar .xlsx ose .csv me një kolonë “Emri” (dhe opsionalisht “Mbiemri”). Emrat e
+              Formate të pranuara: .xlsx, .xls, .ods, .csv, .tsv, .txt, .json, .html — me një
+              kolonë “Emri” (dhe opsionalisht “Mbiemri”), ose një emër për rresht. Emrat e
               përsëritur anashkalohen.
             </p>
             <input
               ref={fileRef}
               type="file"
-              accept=".xlsx,.xls,.csv"
+              accept=".xlsx,.xls,.xlsm,.ods,.csv,.tsv,.txt,.json,.html,.htm,.dbf"
               hidden
               onChange={(e) => onFile(e.target.files?.[0])}
             />
