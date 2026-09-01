@@ -29,7 +29,14 @@ export type PassportRecord = {
   confidence?: Partial<Record<FieldKey, number>>;
   rawText?: Partial<Record<FieldKey, string>>;
   scannedBy?: string;
+  /* Fushat e manifestit të fluturimit */
+  sex?: string;
+  docType?: string;
+  departurePort?: string;
+  arrivalPort?: string;
+  manifest?: Partial<Record<"sq" | "en" | "mk", { given?: string; family?: string }>>;
 };
+
 
 const KEY = "passport-records-v1";
 const AUTH_KEY = "haxhi-auth-v1";

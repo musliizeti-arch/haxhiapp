@@ -2,12 +2,30 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import * as XLSX from "xlsx";
-import { Camera, FileSpreadsheet, Images, ListChecks, Loader2, Pencil, Plane, Search, Settings, Trash2, TriangleAlert, Upload, Users } from "lucide-react";
+import {
+  Camera,
+  FileSpreadsheet,
+  Images,
+  ListChecks,
+  Loader2,
+  Pencil,
+  Plane,
+  Plus,
+  Search,
+  Settings,
+  Syringe,
+  Trash2,
+  TriangleAlert,
+  Upload,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,12 +53,25 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CameraScanner } from "@/components/CameraScanner";
-import { RecordEditor, ConfidenceBadge } from "@/components/RecordEditor";
+import { RecordEditor } from "@/components/RecordEditor";
 import { SplashScreen } from "@/components/SplashScreen";
 import { LoginGate, useAuthed } from "@/components/LoginGate";
 import { extractPassport } from "@/lib/passport.functions";
 import { openPhotoSheet } from "@/lib/photo-sheet";
 import { cn } from "@/lib/utils";
+import {
+  HEADERS,
+  LANG_LABEL,
+  MANIFEST_COLS,
+  formatDate,
+  loadManifestDefaults,
+  manifestValue,
+  saveManifestDefaults,
+  setManifestValue,
+  type Lang,
+  type ManifestCol,
+  type ManifestDefaults,
+} from "@/lib/manifest";
 import {
   cropPhoto,
   fileToDataUrl,
@@ -57,17 +88,17 @@ import logo from "@/assets/haxhi-logo.png.asset.json";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "HAXHI.app — Skanim pasaportash dhe eksport në Excel" },
+      { title: "HAXHI.app — Manifesti i pasaportave dhe eksport në Excel" },
       {
         name: "description",
         content:
-          "HAXHI.app skanon pasaporta me kamerë ose foto, lexon emrat në shqip, anglisht e maqedonisht, datat dhe numrin, dhe i eksporton në Excel.",
+          "HAXHI.app skanon pasaporta me kamerë ose foto dhe i shfaq si manifest fluturimi në shqip, anglisht e maqedonisht, me eksport në Excel.",
       },
-      { property: "og:title", content: "HAXHI.app — Skanim pasaportash" },
+      { property: "og:title", content: "HAXHI.app — Manifesti i pasaportave" },
       {
         property: "og:description",
         content:
-          "Lexim automatik i pasaportave me besueshmëri për çdo fushë, kërkim, alarm skadimi dhe eksport në Excel.",
+          "Manifest fluturimi me tre gjuhë, redaktim manual i rubrikave, alarm skadimi dhe eksport në Excel.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -76,7 +107,14 @@ export const Route = createFileRoute("/")({
   component: IndexPage,
 });
 
-type ExportLang = "sq" | "en" | "mk" | "all";
+type ExportLang = Lang | "all";
+
+const COL_WIDTH: Partial<Record<ManifestCol, string>> = {
+  no: "w-14",
+  sex: "w-16",
+  from: "w-24",
+  to: "w-24",
+};
 
 function IndexPage() {
   const { authed, ready, setAuthed } = useAuthed();
@@ -95,17 +133,33 @@ function Index() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [query, setQuery] = useState("");
+  const [lang, setLang] = useState<Lang>("sq");
+  const [defaults, setDefaults] = useState<ManifestDefaults>(() => ({
+    departurePort: "SKP",
+    arrivalPort: "JED",
+    docType: "Passport",
+    nationality: "MKD",
+  }));
   const [cameraOpen, setCameraOpen] = useState(false);
   const [editing, setEditing] = useState<PassportRecord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const runExtract = useServerFn(extractPassport);
 
-  useEffect(() => setRecords(loadRecords()), []);
+  useEffect(() => {
+    setRecords(loadRecords());
+    setDefaults(loadManifestDefaults());
+  }, []);
 
   function persist(next: PassportRecord[]) {
     setRecords(next);
     saveRecords(next);
+  }
+
+  function updateDefaults(patch: Partial<ManifestDefaults>) {
+    const next = { ...defaults, ...patch };
+    setDefaults(next);
+    saveManifestDefaults(next);
   }
 
   /** Lexon një foto dhe e kthen si regjistrim; hedh gabim nëse dështon. */
@@ -219,76 +273,87 @@ function Index() {
 
   const expiringCount = records.filter(isExpiringSoon).length;
 
-  function exportExcel(lang: ExportLang) {
-    if (!records.length) return;
-    const nameCols = (r: PassportRecord) => {
-      if (lang === "sq") return { "Emri (Shqip)": r.nameSq };
-      if (lang === "en") return { "Emri (Anglisht)": r.nameEn };
-      if (lang === "mk") return { "Emri (Maqedonisht)": r.nameMk };
-      return {
-        "Emri (Shqip)": r.nameSq,
-        "Emri (Anglisht)": r.nameEn,
-        "Emri (Maqedonisht)": r.nameMk,
-      };
+  function updateCell(record: PassportRecord, col: ManifestCol, value: string) {
+    const updated = setManifestValue(record, lang, col, value);
+    persist(records.map((r) => (r.id === record.id ? updated : r)));
+  }
+
+  function addEmptyRow() {
+    const blank: PassportRecord = {
+      id: crypto.randomUUID(),
+      hash: `manual-${crypto.randomUUID()}`,
+      fileName: "manual",
+      thumbnail: "",
+      nameEn: "",
+      nameSq: "",
+      nameMk: "",
+      passportNumber: "",
+      issueDate: "",
+      expiryDate: "",
+      nationality: defaults.nationality,
+      birthDate: "",
+      createdAt: new Date().toISOString(),
     };
-    const rows = records.map((r, i) => ({
-      "Nr.": i + 1,
-      ...nameCols(r),
-      "Nr. i pasaportës": r.passportNumber,
-      "Data e lëshimit": r.issueDate,
-      "Data e skadimit": r.expiryDate,
-      Shtetësia: r.nationality,
-      Datëlindja: r.birthDate,
-      Statusi: isExpiringSoon(r) ? "Skadon < 3 muaj" : "Në rregull",
-    }));
-    const sheet = XLSX.utils.json_to_sheet(rows);
-    sheet["!cols"] = Object.keys(rows[0] ?? {}).map(() => ({ wch: 22 }));
+    persist([...records, blank]);
+    toast.success("U shtua një rresht bosh — plotësojeni manualisht.");
+  }
+
+  function exportExcel(target: ExportLang) {
+    if (!records.length) return;
+    const langs: Lang[] = target === "all" ? ["en", "mk", "sq"] : [target];
+    const header = MANIFEST_COLS.map((c) => langs.map((l) => HEADERS[l][c]).join("\n"));
+    const body = records.map((r, i) =>
+      MANIFEST_COLS.map((c) =>
+        c === "no"
+          ? i + 1
+          : c === "given" || c === "family"
+            ? langs.map((l) => manifestValue(r, l, c, defaults)).filter(Boolean).join(" / ")
+            : manifestValue(r, langs[0]!, c, defaults),
+      ),
+    );
+    const sheet = XLSX.utils.aoa_to_sheet([header, ...body]);
+    sheet["!cols"] = MANIFEST_COLS.map((c) => ({ wch: c === "no" ? 6 : 20 }));
     const book = XLSX.utils.book_new();
-    const label =
-      lang === "sq" ? "Shqip" : lang === "en" ? "Anglisht" : lang === "mk" ? "Maqedonisht" : "3-gjuhe";
+    const label = target === "all" ? "3-gjuhe" : LANG_LABEL[target];
     XLSX.utils.book_append_sheet(book, sheet, label.slice(0, 30));
-    XLSX.writeFile(book, `pasaportat-${label}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(book, `manifesti-${label}-${new Date().toISOString().slice(0, 10)}.xlsx`);
     toast.success("Skedari Excel u shkarkua.");
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-secondary/60 to-background font-sans">
-      <header className="sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-3">
+    <div className="min-h-screen bg-background font-sans">
+      <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-72 bg-gradient-to-b from-primary/10 to-transparent" />
+
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-card/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-6 py-3">
           <div className="flex items-center gap-3">
             <img src={logo.url} alt="Logo HAXHI.app" className="size-10 object-contain" />
             <div>
               <h1 className="text-lg font-bold tracking-tight">HAXHI.app</h1>
               <p className="text-xs text-muted-foreground">
-                Muftinia e BFI Gostivar • Shqip / Anglisht / Maqedonisht
+                Muftinia e BFI Gostivar • Manifest fluturimi
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <nav className="mr-2 flex flex-wrap items-center gap-1">
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/lista">
-                  <ListChecks /> Lista e emrave
-                </Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/grupet">
-                  <Plane /> Grupe / Fluturime
-                </Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/udheheqesit">
-                  <Users /> Udhëheqësit fetarë
-                </Link>
-              </Button>
+            <nav className="mr-1 flex flex-wrap items-center gap-1 rounded-full bg-secondary/70 p-1">
+              <NavLink to="/lista" icon={<ListChecks className="size-4" />} label="Lista" />
+              <NavLink to="/grupet" icon={<Plane className="size-4" />} label="Grupe" />
+              <NavLink to="/vaksinat" icon={<Syringe className="size-4" />} label="Vaksinat" />
+              <NavLink to="/udheheqesit" icon={<Users className="size-4" />} label="Udhëheqësit" />
             </nav>
-            <Button variant="outline" onClick={exportPhotos} disabled={!records.length}>
-              <Images /> Eksporto fotot
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={exportPhotos}
+              disabled={!records.length}
+            >
+              <Images /> Fotot
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" disabled={!records.length}>
-                  <FileSpreadsheet /> Konverto në Excel
+                <Button className="rounded-full" disabled={!records.length}>
+                  <FileSpreadsheet /> Excel
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -305,7 +370,7 @@ function Index() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon" asChild>
+            <Button variant="ghost" size="icon" className="rounded-full" asChild>
               <Link to="/settings" aria-label="Cilësimet">
                 <Settings />
               </Link>
@@ -314,32 +379,22 @@ function Index() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[1fr_280px]">
-        <div className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="shadow-[var(--shadow-panel)]">
-              <CardHeader>
-                <CardTitle className="text-base">Skano me kamerë</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Hapni kamerën dhe fotografoni faqen e të dhënave të pasaportës.
-                </p>
-                <Button className="w-full" onClick={() => setCameraOpen(true)} disabled={busy}>
-                  <Camera /> Hap kamerën
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-[var(--shadow-panel)]">
-              <CardHeader>
-                <CardTitle className="text-base">Ngarko foto të skanuara</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Ngarkim masiv pa limit — zgjidhni sa foto të doni njëherësh. Fotot e njëjta
-                  anashkalohen automatikisht.
-                </p>
+      <main className="mx-auto max-w-[1400px] space-y-6 px-6 py-8">
+        <section className="grid gap-4 md:grid-cols-3">
+          <ActionCard
+            title="Skano me kamerë"
+            text="Fotografoni faqen e të dhënave të pasaportës."
+            action={
+              <Button className="w-full rounded-xl" onClick={() => setCameraOpen(true)} disabled={busy}>
+                <Camera /> Hap kamerën
+              </Button>
+            }
+          />
+          <ActionCard
+            title="Ngarko foto"
+            text="Ngarkim masiv pa limit; fotot e njëjta anashkalohen."
+            action={
+              <>
                 <input
                   ref={fileRef}
                   type="file"
@@ -350,155 +405,189 @@ function Index() {
                 />
                 <Button
                   variant="secondary"
-                  className="w-full"
+                  className="w-full rounded-xl"
                   onClick={() => fileRef.current?.click()}
                   disabled={busy}
                 >
-                  <Upload /> Ngarko foto
+                  <Upload /> Zgjidh fotot
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {busy && (
-            <div className="space-y-2 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Loader2 className="size-4 animate-spin" />
-                {progress
-                  ? `Duke lexuar ${progress.done}/${progress.total} pasaporta…`
-                  : "Duke lexuar pasaportën…"}
+              </>
+            }
+          />
+          <Card className="rounded-2xl border-border/70 shadow-[var(--shadow-panel)]">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Parazgjedhjet e manifestit</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Niset nga</Label>
+                <Input
+                  value={defaults.departurePort}
+                  onChange={(e) => updateDefaults({ departurePort: e.target.value })}
+                  className="rounded-xl"
+                />
               </div>
-              {progress && (
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${(progress.done / progress.total) * 100}%` }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+              <div className="space-y-1">
+                <Label className="text-xs">Arrin në</Label>
+                <Input
+                  value={defaults.arrivalPort}
+                  onChange={(e) => updateDefaults({ arrivalPort: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Lloji i dokumentit</Label>
+                <Input
+                  value={defaults.docType}
+                  onChange={(e) => updateDefaults({ docType: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Shtetësia</Label>
+                <Input
+                  value={defaults.nationality}
+                  onChange={(e) => updateDefaults({ nationality: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </section>
 
-          <Card className="shadow-[var(--shadow-panel)]">
-            <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-              <CardTitle className="text-base">Të dhënat e lexuara</CardTitle>
+        <section className="grid gap-3 sm:grid-cols-3">
+          <Stat label="Pasaporta gjithsej" value={records.length} />
+          <Stat label="Të shfaqura" value={filtered.length} />
+          <Stat label="Me afat nën 3 muaj" value={expiringCount} danger={expiringCount > 0} />
+        </section>
+
+        {busy && (
+          <div className="space-y-2 rounded-2xl border border-border/70 bg-card px-4 py-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin" />
+              {progress
+                ? `Duke lexuar ${progress.done}/${progress.total} pasaporta…`
+                : "Duke lexuar pasaportën…"}
+            </div>
+            {progress && (
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${(progress.done / progress.total) * 100}%` }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        <Card className="rounded-2xl border-border/70 shadow-[var(--shadow-panel)]">
+          <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <CardTitle className="text-base">Manifesti</CardTitle>
+              <Tabs value={lang} onValueChange={(v) => setLang(v as Lang)}>
+                <TabsList className="rounded-full">
+                  <TabsTrigger value="sq" className="rounded-full">
+                    {LANG_LABEL.sq}
+                  </TabsTrigger>
+                  <TabsTrigger value="en" className="rounded-full">
+                    {LANG_LABEL.en}
+                  </TabsTrigger>
+                  <TabsTrigger value="mk" className="rounded-full">
+                    {LANG_LABEL.mk}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               <div className="relative w-full max-w-xs">
                 <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Kërko emrin ose nr. e pasaportës…"
-                  className="pl-9"
+                  placeholder="Kërko emrin ose numrin…"
+                  className="rounded-full pl-9"
                   aria-label="Kërko pasaportë"
                 />
               </div>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              {filtered.length === 0 ? (
-                <p className="py-10 text-center text-sm text-muted-foreground">
-                  {records.length === 0
-                    ? "Ende nuk ka të dhëna. Skanoni ose ngarkoni një pasaportë."
-                    : "Asnjë rezultat për këtë kërkim — kjo pasaportë nuk është skanuar ende."}
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Foto</TableHead>
-                      <TableHead>Anglisht</TableHead>
-                      <TableHead>Shqip</TableHead>
-                      <TableHead>Maqedonisht</TableHead>
-                      <TableHead>Nr. pasaportës</TableHead>
-                      <TableHead>Lëshuar</TableHead>
-                      <TableHead>Skadon</TableHead>
-                      <TableHead className="text-right">Veprime</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((r) => {
-                      const soon = isExpiringSoon(r);
-                      const m = monthsUntil(r.expiryDate);
-                      return (
-                        <TableRow
-                          key={r.id}
-                          className={cn(soon && "bg-destructive/10 text-destructive")}
-                        >
-                          <TableCell>
-                            <img
-                              src={r.thumbnail}
-                              alt={`Pasaporta e ${r.nameEn || "personit"}`}
-                              className="h-10 w-16 rounded border border-border object-cover"
+              <Button variant="outline" className="rounded-full" onClick={addEmptyRow}>
+                <Plus /> Rresht manual
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            {filtered.length === 0 ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">
+                {records.length === 0
+                  ? "Ende nuk ka të dhëna. Skanoni ose ngarkoni një pasaportë."
+                  : "Asnjë rezultat për këtë kërkim — kjo pasaportë nuk është skanuar ende."}
+              </p>
+            ) : (
+              <Table className="min-w-[1100px]">
+                <TableHeader>
+                  <TableRow className="bg-secondary/60">
+                    {MANIFEST_COLS.map((c) => (
+                      <TableHead
+                        key={c}
+                        className={cn("align-bottom text-xs whitespace-pre-line", COL_WIDTH[c])}
+                      >
+                        {HEADERS[lang][c]}
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right text-xs">Veprime</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((r, i) => {
+                    const soon = isExpiringSoon(r);
+                    const m = monthsUntil(r.expiryDate);
+                    return (
+                      <TableRow
+                        key={r.id}
+                        className={cn(soon && "bg-destructive/10 text-destructive")}
+                      >
+                        <TableCell className="tabular-nums">{i + 1}</TableCell>
+                        {MANIFEST_COLS.filter((c) => c !== "no").map((c) => (
+                          <TableCell key={c} className="p-1">
+                            <input
+                              value={manifestValue(r, lang, c, defaults)}
+                              onChange={(e) => updateCell(r, c, e.target.value)}
+                              className={cn(
+                                "w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm outline-none focus:border-ring focus:bg-card",
+                                (c === "given" || c === "family") && "font-medium",
+                                c === "docNo" && "font-mono text-xs",
+                                soon && c === "expiryDate" && "font-semibold",
+                              )}
                             />
-                          </TableCell>
-                          <Cell value={r.nameEn} conf={r.confidence?.nameEn} raw={r.rawText?.nameEn} bold />
-                          <Cell value={r.nameSq} conf={r.confidence?.nameSq} raw={r.rawText?.nameSq} />
-                          <Cell value={r.nameMk} conf={r.confidence?.nameMk} raw={r.rawText?.nameMk} />
-                          <Cell
-                            value={r.passportNumber}
-                            conf={r.confidence?.passportNumber}
-                            raw={r.rawText?.passportNumber}
-                            mono
-                          />
-                          <Cell value={r.issueDate} conf={r.confidence?.issueDate} />
-                          <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              {soon && <TriangleAlert className="size-4" />}
-                              <span className={cn(soon && "font-semibold")}>{r.expiryDate}</span>
-                            </div>
-                            {soon && m !== null && (
-                              <p className="text-[11px]">
-                                {m < 0 ? "E skaduar" : `Skadon për ${Math.max(0, Math.round(m))} muaj`}
+                            {c === "expiryDate" && soon && m !== null && (
+                              <p className="flex items-center gap-1 px-2 text-[11px]">
+                                <TriangleAlert className="size-3" />
+                                {m < 0 ? "E skaduar" : `${Math.max(0, Math.round(m))} muaj`}
                               </p>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button size="icon" variant="ghost" onClick={() => setEditing(r)}>
-                                <Pencil className="size-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={() => setDeleteId(r.id)}>
-                                <Trash2 className="size-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-
-              <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-border pt-4 text-sm">
-                <span className="font-semibold">
-                  Gjithsej pasaporta të skanuara:{" "}
-                  <span className="tabular-nums text-primary">{records.length}</span>
-                </span>
-                <span className="text-muted-foreground">
-                  Të shfaqura: <span className="tabular-nums">{filtered.length}</span>
-                </span>
-                <span className={cn(expiringCount > 0 && "font-semibold text-destructive")}>
-                  Me afat nën 3 muaj: <span className="tabular-nums">{expiringCount}</span>
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <Card className="overflow-hidden text-center shadow-[var(--shadow-panel)]">
-            <CardContent className="space-y-3 p-6">
-              <img
-                src={logo.url}
-                alt="Logo e Muftinisë së BFI Gostivar"
-                className="mx-auto size-32 object-contain"
-              />
-              <p className="text-sm font-semibold text-primary">HAXHI.app</p>
-              <p className="text-xs text-muted-foreground">
-                Regjistrimi i pasaportave për haxhin — Muftinia e BFI Gostivar.
-              </p>
-            </CardContent>
-          </Card>
-        </aside>
+                        ))}
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => setEditing(r)}>
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => setDeleteId(r.id)}>
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+            <p className="mt-4 border-t border-border pt-4 text-xs text-muted-foreground">
+              Rubrikat janë të redaktueshme — shkruani direkt në tabelë. Datat shfaqen si{" "}
+              {formatDate("2033-05-04")}.
+            </p>
+          </CardContent>
+        </Card>
       </main>
 
       <CameraScanner
@@ -543,30 +632,58 @@ function Index() {
   );
 }
 
-function Cell({
-  value,
-  conf,
-  raw,
-  bold,
-  mono,
+function NavLink({
+  to,
+  icon,
+  label,
 }: {
-  value: string;
-  conf?: number | undefined;
-  raw?: string | undefined;
-  bold?: boolean | undefined;
-  mono?: boolean | undefined;
+  to: "/lista" | "/grupet" | "/vaksinat" | "/udheheqesit";
+  icon: React.ReactNode;
+  label: string;
 }) {
   return (
-    <TableCell className="align-top">
-      <div className="flex items-center gap-2">
-        <span className={cn(bold && "font-medium", mono && "font-mono text-xs")}>{value}</span>
-        <ConfidenceBadge value={conf} />
-      </div>
-      {raw ? (
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          <mark className="rounded bg-primary/15 px-1 font-mono text-foreground">{raw}</mark>
-        </p>
-      ) : null}
-    </TableCell>
+    <Button variant="ghost" size="sm" className="rounded-full" asChild>
+      <Link to={to} activeProps={{ className: "bg-card shadow-sm" }}>
+        {icon} {label}
+      </Link>
+    </Button>
+  );
+}
+
+function ActionCard({
+  title,
+  text,
+  action,
+}: {
+  title: string;
+  text: string;
+  action: React.ReactNode;
+}) {
+  return (
+    <Card className="rounded-2xl border-border/70 shadow-[var(--shadow-panel)]">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">{text}</p>
+        {action}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Stat({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-border/70 bg-card px-5 py-4 shadow-[var(--shadow-panel)]",
+        danger && "border-destructive/40 bg-destructive/5",
+      )}
+    >
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={cn("text-2xl font-bold tabular-nums", danger ? "text-destructive" : "text-primary")}>
+        {value}
+      </p>
+    </div>
   );
 }
