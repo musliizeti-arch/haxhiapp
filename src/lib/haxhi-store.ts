@@ -87,3 +87,21 @@ export const loadFlightAssignments = () => readMap(FLIGHT_ASSIGN_KEY);
 export const saveFlightAssignments = (v: Assignments) => writeMap(FLIGHT_ASSIGN_KEY, v);
 export const loadRoomAssignments = () => readMap(ROOM_ASSIGN_KEY);
 export const saveRoomAssignments = (v: Assignments) => writeMap(ROOM_ASSIGN_KEY, v);
+
+/* ---------- Vaksinat ---------- */
+
+export type VaccineEntry = {
+  id: string;
+  personId: string;
+  personName: string;
+  vaccine: string;
+  date: string;
+  dose: string;
+  note: string;
+};
+
+const VACCINES_KEY = "haxhi-vaccines-v1";
+
+export const loadVaccines = () => read<VaccineEntry>(VACCINES_KEY);
+export const saveVaccines = (v: VaccineEntry[]) => write(VACCINES_KEY, v);
+

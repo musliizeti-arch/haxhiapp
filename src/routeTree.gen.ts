@@ -14,6 +14,7 @@ import { Route as GrupetRouteImport } from './routes/grupet'
 import { Route as ListaRouteImport } from './routes/lista'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as UdheheqesitRouteImport } from './routes/udheheqesit'
+import { Route as VaksinatRouteImport } from './routes/vaksinat'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const UdheheqesitRoute = UdheheqesitRouteImport.update({
   path: '/udheheqesit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VaksinatRoute = VaksinatRouteImport.update({
+  id: '/vaksinat',
+  path: '/vaksinat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/lista': typeof ListaRoute
   '/settings': typeof SettingsRoute
   '/udheheqesit': typeof UdheheqesitRoute
+  '/vaksinat': typeof VaksinatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/lista': typeof ListaRoute
   '/settings': typeof SettingsRoute
   '/udheheqesit': typeof UdheheqesitRoute
+  '/vaksinat': typeof VaksinatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,22 @@ export interface FileRoutesById {
   '/lista': typeof ListaRoute
   '/settings': typeof SettingsRoute
   '/udheheqesit': typeof UdheheqesitRoute
+  '/vaksinat': typeof VaksinatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/grupet' | '/lista' | '/settings' | '/udheheqesit'
+  fullPaths:
+    '/' | '/grupet' | '/lista' | '/settings' | '/udheheqesit' | '/vaksinat'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/grupet' | '/lista' | '/settings' | '/udheheqesit'
-  id: '__root__' | '/' | '/grupet' | '/lista' | '/settings' | '/udheheqesit'
+  to: '/' | '/grupet' | '/lista' | '/settings' | '/udheheqesit' | '/vaksinat'
+  id:
+    | '__root__'
+    | '/'
+    | '/grupet'
+    | '/lista'
+    | '/settings'
+    | '/udheheqesit'
+    | '/vaksinat'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +94,7 @@ export interface RootRouteChildren {
   ListaRoute: typeof ListaRoute
   SettingsRoute: typeof SettingsRoute
   UdheheqesitRoute: typeof UdheheqesitRoute
+  VaksinatRoute: typeof VaksinatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +134,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UdheheqesitRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vaksinat': {
+      id: '/vaksinat'
+      path: '/vaksinat'
+      fullPath: '/vaksinat'
+      preLoaderRoute: typeof VaksinatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +150,7 @@ const rootRouteChildren: RootRouteChildren = {
   ListaRoute: ListaRoute,
   SettingsRoute: SettingsRoute,
   UdheheqesitRoute: UdheheqesitRoute,
+  VaksinatRoute: VaksinatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
