@@ -160,11 +160,27 @@ export async function cropPhoto(
       img.onload = res;
       img.onerror = rej;
     });
-    const pad = 0.04;
-    const x = Math.max(0, (box.x - pad * box.w) * img.width);
-    const y = Math.max(0, (box.y - pad * box.h) * img.height);
-    const w = Math.min(img.width - x, box.w * (1 + pad * 2) * img.width);
-    const h = Math.min(img.height - y, box.h * (1 + pad * 2) * img.height);
+    // Prerje e ngushtë — vetëm fotografia e personit, pa pjesë të tjera të pasaportës.
+    const shrink = 0.03;
+    let x = (box.x + shrink * box.w) * img.width;
+    let y = (box.y + shrink * box.h) * img.height;
+    let w = box.w * (1 - shrink * 2) * img.width;
+    let h = box.h * (1 - shrink * 2) * img.height;
+    // Normalizo në raportin e fotos së pasaportës (35x45) duke prerë nga qendra.
+    const target = 35 / 45;
+    if (w / h > target) {
+      const nw = h * target;
+      x += (w - nw) / 2;
+      w = nw;
+    } else {
+      const nh = w / target;
+      y += (h - nh) / 2;
+      h = nh;
+    }
+    x = Math.max(0, x);
+    y = Math.max(0, y);
+    w = Math.min(img.width - x, w);
+    h = Math.min(img.height - y, h);
     if (w < 20 || h < 20) return undefined;
     const scale = Math.min(1, outHeight / h);
     const canvas = document.createElement("canvas");
