@@ -12,15 +12,21 @@ type Props = {
   onSave: (record: PassportRecord) => void;
 };
 
-const fields: { key: FieldKey; label: string; type?: string }[] = [
+type EditableKey = FieldKey | "sex" | "departurePort" | "arrivalPort" | "docType";
+
+const fields: { key: EditableKey; label: string; type?: string }[] = [
   { key: "nameEn", label: "Emri (Anglisht)" },
   { key: "nameSq", label: "Emri (Shqip)" },
   { key: "nameMk", label: "Emri (Maqedonisht)" },
   { key: "passportNumber", label: "Nr. i pasaportës" },
+  { key: "sex", label: "Gjinia (M/F)" },
+  { key: "birthDate", label: "Datëlindja", type: "date" },
   { key: "issueDate", label: "Data e lëshimit", type: "date" },
   { key: "expiryDate", label: "Data e skadimit", type: "date" },
   { key: "nationality", label: "Shtetësia" },
-  { key: "birthDate", label: "Datëlindja", type: "date" },
+  { key: "docType", label: "Lloji i dokumentit" },
+  { key: "departurePort", label: "Niset nga" },
+  { key: "arrivalPort", label: "Arrin në" },
 ];
 
 export function ConfidenceBadge({ value }: { value: number | undefined }) {
@@ -51,48 +57,75 @@ export function RecordEditor({ record, onClose, onSave }: Props) {
 
   return (
     <Dialog open={!!record} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle>Redakto të dhënat</DialogTitle>
         </DialogHeader>
         {draft && (
-          <div className="grid gap-5 sm:grid-cols-2">
-            {fields.map((f) => {
-              const conf = draft.confidence?.[f.key];
-              const raw = draft.rawText?.[f.key];
-              return (
-                <div key={f.key} className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor={f.key}>{f.label}</Label>
-                    <ConfidenceBadge value={conf} />
-                  </div>
-                  <Input
-                    id={f.key}
-                    type={f.type ?? "text"}
-                    value={String(draft[f.key] ?? "")}
-                    onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
-                    className={cn(
-                      conf !== undefined && conf < 0.6 && "border-destructive/60",
-                    )}
+          <div className="grid gap-6 md:grid-cols-[200px_1fr]">
+            <div className="space-y-3">
+              <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                {draft.photo || draft.thumbnail ? (
+                  <img
+                    src={draft.photo || draft.thumbnail}
+                    alt={`Fotografia e ${draft.nameSq || draft.nameEn || "personit"}`}
+                    className="aspect-[35/45] w-full bg-card object-cover"
                   />
-                  {raw ? (
-                    <p className="text-[11px] text-muted-foreground">
-                      Lexuar nga fotoja:{" "}
-                      <mark className="rounded bg-primary/15 px-1 py-0.5 font-mono text-foreground">
-                        {raw}
-                      </mark>
-                    </p>
-                  ) : null}
-                </div>
-              );
-            })}
+                ) : (
+                  <div className="flex aspect-[35/45] items-center justify-center text-xs text-muted-foreground">
+                    Pa foto
+                  </div>
+                )}
+              </div>
+              {draft.thumbnail && draft.photo && (
+                <img
+                  src={draft.thumbnail}
+                  alt="Pasaporta e plotë"
+                  className="w-full rounded-xl border border-border object-cover"
+                />
+              )}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {fields.map((f) => {
+                const conf = draft.confidence?.[f.key as FieldKey];
+                const raw = draft.rawText?.[f.key as FieldKey];
+                return (
+                  <div key={f.key} className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label htmlFor={f.key}>{f.label}</Label>
+                      <ConfidenceBadge value={conf} />
+                    </div>
+                    <Input
+                      id={f.key}
+                      type={f.type ?? "text"}
+                      value={String(draft[f.key] ?? "")}
+                      onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+                      className={cn(
+                        "rounded-xl",
+                        conf !== undefined && conf < 0.6 && "border-destructive/60",
+                      )}
+                    />
+                    {raw ? (
+                      <p className="text-[11px] text-muted-foreground">
+                        Lexuar nga fotoja:{" "}
+                        <mark className="rounded bg-primary/15 px-1 py-0.5 font-mono text-foreground">
+                          {raw}
+                        </mark>
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" className="rounded-xl" onClick={onClose}>
             Anulo
           </Button>
-          <Button onClick={() => draft && onSave(draft)}>Ruaj</Button>
+          <Button className="rounded-xl" onClick={() => draft && onSave(draft)}>
+            Ruaj
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

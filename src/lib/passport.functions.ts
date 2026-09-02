@@ -14,6 +14,7 @@ const FIELDS = [
   ["expiry_date", "expiryDate"],
   ["nationality", "nationality"],
   ["birth_date", "birthDate"],
+  ["sex", "sex"],
 ] as const;
 
 function fieldSchema(description: string) {
@@ -41,7 +42,7 @@ export const extractPassport = createServerFn({ method: "POST" })
     properties["photo_box"] = {
       type: "object",
       description:
-        "Bounding box of the holder's portrait photo on the passport image, normalized 0-1 relative to image width/height. Use zeros if no photo is visible.",
+        "TIGHT bounding box of ONLY the holder's printed face portrait (the rectangular ID photo, usually on the left of the data page, aspect ~35x45mm). Normalized 0-1 relative to full image width/height. The box must contain just the photo rectangle: no text fields, no MRZ, no passport border, no ghost image. Use zeros if no photo is visible.",
       properties: {
         x: { type: "number", description: "Left edge 0-1" },
         y: { type: "number", description: "Top edge 0-1" },
@@ -74,7 +75,8 @@ export const extractPassport = createServerFn({ method: "POST" })
               "when the name is readable. Same rule for name_sq (always Albanian latin orthography). " +
               "For every field return: value (dates ISO YYYY-MM-DD), raw_text (the literal characters you read on the image, " +
               "or the MRZ segment used), and confidence between 0 and 1 reflecting how clearly you could read it. " +
-              "Use empty string and confidence 0 when unreadable. Never invent data.",
+              "sex = M or F. Use empty string and confidence 0 when unreadable. Never invent data. " +
+              "For photo_box measure precisely the edges of the portrait photo rectangle only.",
           },
           {
             role: "user",
@@ -139,6 +141,7 @@ export const extractPassport = createServerFn({ method: "POST" })
       expiryDate: values["expiryDate"] ?? "",
       nationality: values["nationality"] ?? "",
       birthDate: values["birthDate"] ?? "",
+      sex: (values["sex"] ?? "").toUpperCase().slice(0, 1),
       confidence,
       rawText,
       photoBox: (() => {
@@ -148,5 +151,90 @@ export const extractPassport = createServerFn({ method: "POST" })
         const box = { x: num(b.x), y: num(b.y), w: num(b.w), h: num(b.h) };
         return box.w > 0.02 && box.h > 0.02 ? box : null;
       })(),
+    };
+  });
+
+
+/* ---------- Vaksinat: leximi i certifikatës ---------- */
+
+const vaccineSchema = z.object({ imageDataUrl: z.string().min(20) });
+
+export const extractVaccine = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => vaccineSchema.parse(data))
+  .handler(async ({ data }) => {
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("AI nuk eshte i konfiguruar.");
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You read vaccination certificates / vaccine cards (any language). Extract the person's full name, " +
+              "passport or ID number if printed, and every vaccine entry (vaccine name, date ISO YYYY-MM-DD, dose). " +
+              "Never invent data; use empty strings when unreadable.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Extract the vaccination data from this image." },
+              { type: "image_url", image_url: { url: data.imageDataUrl } },
+            ],
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "save_vaccines",
+              parameters: {
+                type: "object",
+                properties: {
+                  person_name: { type: "string" },
+                  document_number: { type: "string" },
+                  entries: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        vaccine: { type: "string" },
+                        date: { type: "string" },
+                        dose: { type: "string" },
+                      },
+                      required: ["vaccine", "date", "dose"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["person_name", "document_number", "entries"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "save_vaccines" } },
+      }),
+    });
+
+    if (res.status === 429) throw new Error("Shume kerkesa. Provoni perseri pas pak.");
+    if (res.status === 402) throw new Error("Kredite AI te pamjaftueshme.");
+    if (!res.ok) throw new Error(`Gabim gjate leximit: ${res.status}`);
+    const json = await res.json();
+    const call = json?.choices?.[0]?.message?.tool_calls?.[0];
+    if (!call) throw new Error("Nuk u lexuan te dhena nga certifikata.");
+    const parsed = JSON.parse(call.function.arguments ?? "{}");
+    const entries = Array.isArray(parsed?.entries) ? parsed.entries : [];
+    return {
+      personName: String(parsed?.person_name ?? ""),
+      documentNumber: String(parsed?.document_number ?? ""),
+      entries: entries.map((e: Record<string, unknown>) => ({
+        vaccine: String(e?.["vaccine"] ?? ""),
+        date: String(e?.["date"] ?? ""),
+        dose: String(e?.["dose"] ?? ""),
+      })) as { vaccine: string; date: string; dose: string }[],
     };
   });
