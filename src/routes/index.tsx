@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import * as XLSX from "xlsx";
@@ -6,26 +6,22 @@ import {
   Camera,
   FileSpreadsheet,
   Images,
-  ListChecks,
   Loader2,
+  MessageCircle,
   Pencil,
-  Plane,
   Plus,
   Search,
-  Settings,
-  Syringe,
   Trash2,
   TriangleAlert,
   Upload,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AppShell } from "@/components/AppShell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,13 +56,13 @@ import { extractPassport } from "@/lib/passport.functions";
 import { openPhotoSheet } from "@/lib/photo-sheet";
 import { cn } from "@/lib/utils";
 import {
+  FALLBACK_DEFAULTS,
   HEADERS,
   LANG_LABEL,
   MANIFEST_COLS,
   formatDate,
   loadManifestDefaults,
   manifestValue,
-  saveManifestDefaults,
   setManifestValue,
   type Lang,
   type ManifestCol,
@@ -83,7 +79,6 @@ import {
   shrinkImage,
   type PassportRecord,
 } from "@/lib/passport-store";
-import logo from "@/assets/haxhi-logo.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -134,12 +129,7 @@ function Index() {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState<Lang>("sq");
-  const [defaults, setDefaults] = useState<ManifestDefaults>(() => ({
-    departurePort: "SKP",
-    arrivalPort: "JED",
-    docType: "Passport",
-    nationality: "MKD",
-  }));
+  const [defaults, setDefaults] = useState<ManifestDefaults>(FALLBACK_DEFAULTS);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [editing, setEditing] = useState<PassportRecord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -154,12 +144,6 @@ function Index() {
   function persist(next: PassportRecord[]) {
     setRecords(next);
     saveRecords(next);
-  }
-
-  function updateDefaults(patch: Partial<ManifestDefaults>) {
-    const next = { ...defaults, ...patch };
-    setDefaults(next);
-    saveManifestDefaults(next);
   }
 
   /** Lexon një foto dhe e kthen si regjistrim; hedh gabim nëse dështon. */
@@ -320,139 +304,67 @@ function Index() {
     toast.success("Skedari Excel u shkarkua.");
   }
 
+  const actions = (
+    <>
+      <Button variant="outline" className="rounded-full" asChild>
+        <a href="https://web.whatsapp.com" target="_blank" rel="noreferrer">
+          <MessageCircle className="text-primary" /> WhatsApp Web
+        </a>
+      </Button>
+      <Button
+        variant="outline"
+        className="rounded-full"
+        onClick={exportPhotos}
+        disabled={!records.length}
+      >
+        <Images /> Fotot
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="rounded-full" disabled={!records.length}>
+            <FileSpreadsheet /> Excel
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Zgjidh gjuhën</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => exportExcel("sq")}>Vetëm shqip</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => exportExcel("en")}>Vetëm anglisht</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => exportExcel("mk")}>Vetëm maqedonisht</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => exportExcel("all")}>Të 3 gjuhët bashkë</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+
   return (
-    <div className="min-h-screen bg-background font-sans">
-      <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-72 bg-gradient-to-b from-primary/10 to-transparent" />
-
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-card/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-6 py-3">
-          <div className="flex items-center gap-3">
-            <img src={logo.url} alt="Logo HAXHI.app" className="size-10 object-contain" />
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">HAXHI.app</h1>
-              <p className="text-xs text-muted-foreground">
-                Muftinia e BFI Gostivar • Manifest fluturimi
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <nav className="mr-1 flex flex-wrap items-center gap-1 rounded-full bg-secondary/70 p-1">
-              <NavLink to="/lista" icon={<ListChecks className="size-4" />} label="Lista" />
-              <NavLink to="/grupet" icon={<Plane className="size-4" />} label="Grupe" />
-              <NavLink to="/vaksinat" icon={<Syringe className="size-4" />} label="Vaksinat" />
-              <NavLink to="/udheheqesit" icon={<Users className="size-4" />} label="Udhëheqësit" />
-            </nav>
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={exportPhotos}
-              disabled={!records.length}
-            >
-              <Images /> Fotot
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="rounded-full" disabled={!records.length}>
-                  <FileSpreadsheet /> Excel
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Zgjidh gjuhën</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => exportExcel("sq")}>Vetëm shqip</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportExcel("en")}>Vetëm anglisht</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportExcel("mk")}>
-                  Vetëm maqedonisht
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => exportExcel("all")}>
-                  Të 3 gjuhët bashkë
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="ghost" size="icon" className="rounded-full" asChild>
-              <Link to="/settings" aria-label="Cilësimet">
-                <Settings />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[1400px] space-y-6 px-6 py-8">
-        <section className="grid gap-4 md:grid-cols-3">
-          <ActionCard
+    <AppShell title="Pasaportat" subtitle="Manifesti i fluturimit" actions={actions}>
+      <div className="mx-auto max-w-[1400px] space-y-6">
+        <section className="grid gap-4 sm:grid-cols-2">
+          <BigAction
+            icon={<Camera className="size-10" />}
             title="Skano me kamerë"
             text="Fotografoni faqen e të dhënave të pasaportës."
-            action={
-              <Button className="w-full rounded-xl" onClick={() => setCameraOpen(true)} disabled={busy}>
-                <Camera /> Hap kamerën
-              </Button>
-            }
+            onClick={() => setCameraOpen(true)}
+            disabled={busy}
           />
-          <ActionCard
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            onChange={(e) => onFiles(e.target.files)}
+          />
+          <BigAction
+            icon={<Upload className="size-10" />}
             title="Ngarko foto"
-            text="Ngarkim masiv pa limit; fotot e njëjta anashkalohen."
-            action={
-              <>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  hidden
-                  onChange={(e) => onFiles(e.target.files)}
-                />
-                <Button
-                  variant="secondary"
-                  className="w-full rounded-xl"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={busy}
-                >
-                  <Upload /> Zgjidh fotot
-                </Button>
-              </>
-            }
+            text="Ngarkim masiv pa limit — fotot e njëjta anashkalohen."
+            onClick={() => fileRef.current?.click()}
+            disabled={busy}
+            secondary
           />
-          <Card className="rounded-2xl border-border/70 shadow-[var(--shadow-panel)]">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Parazgjedhjet e manifestit</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Niset nga</Label>
-                <Input
-                  value={defaults.departurePort}
-                  onChange={(e) => updateDefaults({ departurePort: e.target.value })}
-                  className="rounded-xl"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Arrin në</Label>
-                <Input
-                  value={defaults.arrivalPort}
-                  onChange={(e) => updateDefaults({ arrivalPort: e.target.value })}
-                  className="rounded-xl"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Lloji i dokumentit</Label>
-                <Input
-                  value={defaults.docType}
-                  onChange={(e) => updateDefaults({ docType: e.target.value })}
-                  className="rounded-xl"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Shtetësia</Label>
-                <Input
-                  value={defaults.nationality}
-                  onChange={(e) => updateDefaults({ nationality: e.target.value })}
-                  className="rounded-xl"
-                />
-              </div>
-            </CardContent>
-          </Card>
         </section>
 
         <section className="grid gap-3 sm:grid-cols-3">
@@ -588,7 +500,7 @@ function Index() {
             </p>
           </CardContent>
         </Card>
-      </main>
+      </div>
 
       <CameraScanner
         open={cameraOpen}
@@ -628,47 +540,52 @@ function Index() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </AppShell>
   );
 }
 
-function NavLink({
-  to,
+function BigAction({
   icon,
-  label,
-}: {
-  to: "/lista" | "/grupet" | "/vaksinat" | "/udheheqesit";
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <Button variant="ghost" size="sm" className="rounded-full" asChild>
-      <Link to={to} activeProps={{ className: "bg-card shadow-sm" }}>
-        {icon} {label}
-      </Link>
-    </Button>
-  );
-}
-
-function ActionCard({
   title,
   text,
-  action,
+  onClick,
+  disabled,
+  secondary,
 }: {
+  icon: React.ReactNode;
   title: string;
   text: string;
-  action: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  secondary?: boolean;
 }) {
   return (
-    <Card className="rounded-2xl border-border/70 shadow-[var(--shadow-panel)]">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">{text}</p>
-        {action}
-      </CardContent>
-    </Card>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "group flex items-center gap-5 rounded-3xl border p-6 text-left shadow-[var(--shadow-panel)] transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60",
+        secondary
+          ? "border-border/70 bg-card"
+          : "border-primary/30 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground",
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-20 shrink-0 items-center justify-center rounded-2xl",
+          secondary ? "bg-primary/10 text-primary" : "bg-primary-foreground/15",
+        )}
+      >
+        {icon}
+      </span>
+      <span>
+        <span className="block text-xl font-bold tracking-tight">{title}</span>
+        <span className={cn("mt-1 block text-sm", secondary ? "text-muted-foreground" : "opacity-85")}>
+          {text}
+        </span>
+      </span>
+    </button>
   );
 }
 
