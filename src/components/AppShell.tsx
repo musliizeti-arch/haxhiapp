@@ -115,6 +115,9 @@ export function AppShell({
           </nav>
         </header>
         <main className={cn("flex-1 px-5 py-6 lg:px-8")}>{children}</main>
+        <footer className="flex justify-end px-5 py-3 lg:px-8">
+          <Copyright />
+        </footer>
       </div>
     </div>
   );
