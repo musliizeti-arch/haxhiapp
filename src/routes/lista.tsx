@@ -175,66 +175,64 @@ function RosterContent() {
   }, [people, query]);
 
   const matched = people.filter((p) => scannedKeys.has(normalize(p.name))).length;
+  const allSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.id));
+
+  function toggleAll() {
+    const next = new Set(selected);
+    if (allSelected) filtered.forEach((p) => next.delete(p.id));
+    else filtered.forEach((p) => next.add(p.id));
+    setSelected(next);
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-secondary/60 to-background font-sans">
-      <header className="border-b border-border bg-card/85 px-6 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/" aria-label="Kthehu">
-              <ArrowLeft />
-            </Link>
+    <AppShell
+      title="Lista e emrave"
+      subtitle="Importoni listën dhe shihni kush e ka pasaportën të skanuar"
+      actions={
+        <>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls,.xlsm,.ods,.csv,.tsv,.txt,.json,.html,.htm,.dbf"
+            hidden
+            onChange={(e) => onFile(e.target.files?.[0])}
+          />
+          <Button onClick={() => fileRef.current?.click()}>
+            <Upload /> Ngarko listë
           </Button>
-          <div>
-            <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight">
-              <ListChecks className="size-5 text-primary" /> Lista e emrave
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Importoni listën Excel dhe shihni kush e ka pasaportën të skanuar
-            </p>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl space-y-6 px-6 py-8">
-        <Card className="shadow-[var(--shadow-panel)]">
-          <CardHeader>
-            <CardTitle className="text-base">Ngarko listën Excel</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Formate të pranuara: .xlsx, .xls, .ods, .csv, .tsv, .txt, .json, .html — me një
-              kolonë “Emri” (dhe opsionalisht “Mbiemri”), ose një emër për rresht. Emrat e
-              përsëritur anashkalohen.
-            </p>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls,.xlsm,.ods,.csv,.tsv,.txt,.json,.html,.htm,.dbf"
-              hidden
-              onChange={(e) => onFile(e.target.files?.[0])}
-            />
-            <Button onClick={() => fileRef.current?.click()}>
-              <Upload /> Ngarko Excel
-            </Button>
-          </CardContent>
-        </Card>
+        </>
+      }
+    >
+      <div className="mx-auto max-w-6xl space-y-6">
+        <p className="text-sm text-muted-foreground">
+          Formate të pranuara: .xlsx, .xls, .ods, .csv, .tsv, .txt, .json, .html — me një kolonë
+          “Emri” (dhe opsionalisht “Mbiemri”), ose një emër për rresht. Emrat e përsëritur
+          anashkalohen.
+        </p>
 
         <Card className="shadow-[var(--shadow-panel)]">
           <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-base">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ListChecks className="size-4 text-primary" />
               Emra në listë: <span className="tabular-nums text-primary">{people.length}</span> •
               me pasaportë: <span className="tabular-nums text-primary">{matched}</span>
             </CardTitle>
-            <div className="relative w-full max-w-xs">
-              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Kërko emrin…"
-                className="pl-9"
-                aria-label="Kërko emrin"
-              />
+            <div className="flex flex-wrap items-center gap-2">
+              {selected.size > 0 && (
+                <Button variant="destructive" size="sm" onClick={deleteSelected}>
+                  <Trash2 /> Fshi të zgjedhurit ({selected.size})
+                </Button>
+              )}
+              <div className="relative w-full max-w-xs">
+                <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Kërko emrin…"
+                  className="pl-9"
+                  aria-label="Kërko emrin"
+                />
+              </div>
             </div>
           </CardHeader>
           <CardContent className="overflow-x-auto">
@@ -246,6 +244,13 @@ function RosterContent() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={toggleAll}
+                        aria-label="Zgjidh të gjithë"
+                      />
+                    </TableHead>
                     <TableHead>Nr.</TableHead>
                     <TableHead>Emri</TableHead>
                     <TableHead>Pasaporta</TableHead>
@@ -256,8 +261,21 @@ function RosterContent() {
                 <TableBody>
                   {filtered.map((p, i) => {
                     const ok = scannedKeys.has(normalize(p.name));
+                    const isSel = selected.has(p.id);
                     return (
-                      <TableRow key={p.id}>
+                      <TableRow key={p.id} data-state={isSel ? "selected" : undefined}>
+                        <TableCell>
+                          <Checkbox
+                            checked={isSel}
+                            onCheckedChange={(c) => {
+                              const next = new Set(selected);
+                              if (c) next.add(p.id);
+                              else next.delete(p.id);
+                              setSelected(next);
+                            }}
+                            aria-label={`Zgjidh ${p.name}`}
+                          />
+                        </TableCell>
                         <TableCell className="tabular-nums text-muted-foreground">{i + 1}</TableCell>
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell>
@@ -293,7 +311,7 @@ function RosterContent() {
             )}
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
