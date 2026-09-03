@@ -1,10 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import { ArrowLeft, CheckCircle2, ListChecks, Search, Trash2, Upload } from "lucide-react";
+import { CheckCircle2, ListChecks, Search, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
+import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
