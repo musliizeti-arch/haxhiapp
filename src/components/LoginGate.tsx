@@ -74,6 +74,7 @@ export function LoginGate({
           </form>
         </CardContent>
       </Card>
+      <Copyright fixed />
     </div>
   );
 }
