@@ -66,6 +66,7 @@ function RosterContent() {
   const [people, setPeople] = useState<RosterPerson[]>([]);
   const [records, setRecords] = useState<PassportRecord[]>([]);
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -76,6 +77,13 @@ function RosterContent() {
   function persist(next: RosterPerson[]) {
     setPeople(next);
     saveRoster(next);
+  }
+
+  function deleteSelected() {
+    if (!selected.size) return;
+    persist(people.filter((p) => !selected.has(p.id)));
+    toast.success(`U fshinë ${selected.size} emra.`);
+    setSelected(new Set());
   }
 
   const scannedKeys = useMemo(() => {
