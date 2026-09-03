@@ -1,8 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ListChecks, MessageCircle, Plane, ScanLine, Settings, Syringe, Users } from "lucide-react";
+import {
+  ListChecks,
+  MessageCircle,
+  Plane,
+  ScanLine,
+  Settings,
+  Syringe,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Copyright } from "@/components/Copyright";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/haxhi-logo.png.asset.json";
 
@@ -12,6 +22,7 @@ const NAV = [
   { to: "/grupet", label: "Grupe / Fluturime", icon: Plane },
   { to: "/vaksinat", label: "Vaksinat", icon: Syringe },
   { to: "/udheheqesit", label: "Udhëheqësit fetarë", icon: Users },
+  { to: "/regjistrimet", label: "Regjistrimet e reja", icon: UserPlus },
 ] as const;
 
 export function AppShell({
@@ -104,6 +115,9 @@ export function AppShell({
           </nav>
         </header>
         <main className={cn("flex-1 px-5 py-6 lg:px-8")}>{children}</main>
+        <footer className="flex justify-end px-5 py-3 lg:px-8">
+          <Copyright />
+        </footer>
       </div>
     </div>
   );

@@ -1,20 +1,28 @@
 import { useEffect, useState } from "react";
 import logo from "@/assets/haxhi-logo.png.asset.json";
+import { Copyright } from "@/components/Copyright";
+
+const SPLASH_KEY = "haxhi-splash-shown";
 
 export function SplashScreen() {
-  const [gone, setGone] = useState(false);
+  // Start hidden (SSR-safe); show only once per browser session.
+  const [visible, setVisible] = useState(false);
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.sessionStorage.getItem(SPLASH_KEY)) return;
+    window.sessionStorage.setItem(SPLASH_KEY, "1");
+    setVisible(true);
     const a = setTimeout(() => setFading(true), 1500);
-    const b = setTimeout(() => setGone(true), 2100);
+    const b = setTimeout(() => setVisible(false), 2100);
     return () => {
       clearTimeout(a);
       clearTimeout(b);
     };
   }, []);
 
-  if (gone) return null;
+  if (!visible) return null;
 
   return (
     <div
@@ -31,6 +39,7 @@ export function SplashScreen() {
         <p className="text-2xl font-bold tracking-tight text-primary">HAXHI.app</p>
         <p className="mt-1 text-xs text-muted-foreground">Muftinia e BFI Gostivar</p>
       </div>
+      <Copyright fixed />
     </div>
   );
 }

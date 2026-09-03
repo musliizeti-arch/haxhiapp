@@ -105,3 +105,20 @@ const VACCINES_KEY = "haxhi-vaccines-v1";
 export const loadVaccines = () => read<VaccineEntry>(VACCINES_KEY);
 export const saveVaccines = (v: VaccineEntry[]) => write(VACCINES_KEY, v);
 
+/* ---------- Regjistrimet e reja (vitet e ardhshme) ---------- */
+
+export type Registration = {
+  id: string;
+  name: string;
+  phone: string;
+  city: string;
+  year: string;
+  note: string;
+  createdAt: string;
+};
+
+const REGISTRATIONS_KEY = "haxhi-registrations-v1";
+
+export const loadRegistrations = () => read<Registration>(REGISTRATIONS_KEY);
+export const saveRegistrations = (v: Registration[]) => write(REGISTRATIONS_KEY, v);
+
