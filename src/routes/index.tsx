@@ -230,15 +230,12 @@ function Index() {
   }
 
   function exportPhotos() {
+    // Vetëm portreti i prerë nga pasaporta — asnjë e dhënë tjetër.
     const items = records
-      .map((r) => ({
-        src: r.photo || r.thumbnail,
-        name: r.nameSq || r.nameEn || r.nameMk || "—",
-        subtitle: r.passportNumber,
-      }))
-      .filter((i) => !!i.src);
+      .filter((r) => !!r.photo)
+      .map((r) => ({ src: r.photo!, name: "Foto" }));
     if (!items.length) {
-      toast.warning("Nuk ka fotografi për eksport.");
+      toast.warning("Nuk ka fotografi portret. Mund t'i ngarkoni te 'Redakto' për secilin person.");
       return;
     }
     const ok = openPhotoSheet(items);

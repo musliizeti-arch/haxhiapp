@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import type { FieldKey, PassportRecord } from "@/lib/passport-store";
+import { shrinkImage, type FieldKey, type PassportRecord } from "@/lib/passport-store";
 
 type Props = {
   record: PassportRecord | null;
@@ -53,7 +54,20 @@ export function ConfidenceBadge({ value }: { value: number | undefined }) {
 
 export function RecordEditor({ record, onClose, onSave }: Props) {
   const [draft, setDraft] = useState<PassportRecord | null>(record);
+  const photoInput = useRef<HTMLInputElement>(null);
   useEffect(() => setDraft(record), [record]);
+
+  async function onPhotoFile(file: File | undefined) {
+    if (!file || !draft) return;
+    const raw = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+    const photo = await shrinkImage(raw, 600);
+    setDraft({ ...draft, photo });
+  }
 
   return (
     <Dialog open={!!record} onOpenChange={(o) => !o && onClose()}>
@@ -65,9 +79,9 @@ export function RecordEditor({ record, onClose, onSave }: Props) {
           <div className="grid gap-6 md:grid-cols-[200px_1fr]">
             <div className="space-y-3">
               <div className="overflow-hidden rounded-2xl border border-border bg-card">
-                {draft.photo || draft.thumbnail ? (
+                {draft.photo ? (
                   <img
-                    src={draft.photo || draft.thumbnail}
+                    src={draft.photo}
                     alt={`Fotografia e ${draft.nameSq || draft.nameEn || "personit"}`}
                     className="aspect-[35/45] w-full bg-card object-cover"
                   />
@@ -77,7 +91,25 @@ export function RecordEditor({ record, onClose, onSave }: Props) {
                   </div>
                 )}
               </div>
-              {draft.thumbnail && draft.photo && (
+              <input
+                ref={photoInput}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  void onPhotoFile(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-xl"
+                onClick={() => photoInput.current?.click()}
+              >
+                <Upload /> Ngarko foto
+              </Button>
+              {draft.thumbnail && (
                 <img
                   src={draft.thumbnail}
                   alt="Pasaporta e plotë"
