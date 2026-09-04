@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import type { FieldKey, PassportRecord } from "@/lib/passport-store";
+import { shrinkImage, type FieldKey, type PassportRecord } from "@/lib/passport-store";
 
 type Props = {
   record: PassportRecord | null;
