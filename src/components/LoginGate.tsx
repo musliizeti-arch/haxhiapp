@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isSignedIn, signIn } from "@/lib/passport-store";
+import { Copyright } from "@/components/Copyright";
 import logo from "@/assets/haxhi-logo.png.asset.json";
 
 export function useAuthed() {
