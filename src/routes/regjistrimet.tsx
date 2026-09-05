@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import * as XLSX from "xlsx";
-import { Download, Plus, Search, Trash2, Upload, UserPlus } from "lucide-react";
+import { Camera, Download, Loader2, Plus, ScanLine, Search, Trash2, Upload, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
+import { CameraScanner } from "@/components/CameraScanner";
 import { LoginGate, useAuthed } from "@/components/LoginGate";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,6 +22,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { loadRegistrations, saveRegistrations, type Registration } from "@/lib/haxhi-store";
+import { extractPassport } from "@/lib/passport.functions";
+import { cropPhoto, fileToDataUrl, shrinkImage } from "@/lib/passport-store";
 
 export const Route = createFileRoute("/regjistrimet")({
   head: () => ({
