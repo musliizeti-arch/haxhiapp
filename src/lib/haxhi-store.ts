@@ -115,6 +115,11 @@ export type Registration = {
   year: string;
   note: string;
   createdAt: string;
+  /* Nga skanimi i pasaportës (opsionale) */
+  passportNumber?: string;
+  birthDate?: string;
+  expiryDate?: string;
+  photo?: string;
 };
 
 const REGISTRATIONS_KEY = "haxhi-registrations-v1";

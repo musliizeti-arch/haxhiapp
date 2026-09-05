@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import * as XLSX from "xlsx";
-import { Download, Plus, Search, Trash2, Upload, UserPlus } from "lucide-react";
+import { Camera, Download, Loader2, Plus, ScanLine, Search, Trash2, Upload, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
+import { CameraScanner } from "@/components/CameraScanner";
 import { LoginGate, useAuthed } from "@/components/LoginGate";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,6 +22,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { loadRegistrations, saveRegistrations, type Registration } from "@/lib/haxhi-store";
+import { extractPassport } from "@/lib/passport.functions";
+import { cropPhoto, fileToDataUrl, shrinkImage } from "@/lib/passport-store";
 
 export const Route = createFileRoute("/regjistrimet")({
   head: () => ({
@@ -52,7 +56,27 @@ function RegistrationsPage() {
 }
 
 const nextYear = String(new Date().getFullYear() + 1);
-const EMPTY = { name: "", phone: "", city: "", year: nextYear, note: "" };
+type Form = {
+  name: string;
+  phone: string;
+  city: string;
+  year: string;
+  note: string;
+  passportNumber: string;
+  birthDate: string;
+  expiryDate: string;
+  photo?: string;
+};
+const EMPTY: Form = {
+  name: "",
+  phone: "",
+  city: "",
+  year: nextYear,
+  note: "",
+  passportNumber: "",
+  birthDate: "",
+  expiryDate: "",
+};
 
 function norm(v: string) {
   return v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
@@ -60,10 +84,14 @@ function norm(v: string) {
 
 function RegistrationsContent() {
   const [items, setItems] = useState<Registration[]>([]);
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState<Form>(EMPTY);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const passportRef = useRef<HTMLInputElement>(null);
+  const runExtract = useServerFn(extractPassport);
 
   useEffect(() => setItems(loadRegistrations()), []);
 
@@ -72,9 +100,38 @@ function RegistrationsContent() {
     saveRegistrations(next);
   }
 
+  /** Lexon pasaportën, pret portretin dhe mbush formularin automatikisht. */
+  async function scanPassport(rawDataUrl: string) {
+    setScanning(true);
+    try {
+      const imageDataUrl = await shrinkImage(rawDataUrl);
+      const data = await runExtract({ data: { imageDataUrl } });
+      const photo = await cropPhoto(imageDataUrl, data.photoBox);
+      const name = data.nameSq || data.nameEn || data.nameMk;
+      setForm((f) => ({
+        ...f,
+        name: name || f.name,
+        passportNumber: data.passportNumber || f.passportNumber,
+        birthDate: data.birthDate || f.birthDate,
+        expiryDate: data.expiryDate || f.expiryDate,
+        ...(photo ? { photo } : {}),
+      }));
+      toast.success(name ? `U lexua: ${name} — kontrolloni dhe shtypni "Shto".` : "Pasaporta u lexua pjesërisht.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gabim gjatë leximit të pasaportës.");
+    } finally {
+      setScanning(false);
+      if (passportRef.current) passportRef.current.value = "";
+    }
+  }
+
   function add() {
     if (!form.name.trim()) {
       toast.warning("Shkruani emrin e personit.");
+      return;
+    }
+    if (form.passportNumber && items.some((i) => i.passportNumber && i.passportNumber === form.passportNumber)) {
+      toast.warning("Kjo pasaportë është regjistruar më parë.");
       return;
     }
     persist([{ id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...form }, ...items]);
@@ -150,6 +207,9 @@ function RegistrationsContent() {
         Telefoni: i.phone,
         Qyteti: i.city,
         Viti: i.year,
+        "Nr. pasaportës": i.passportNumber ?? "",
+        Datëlindja: i.birthDate ?? "",
+        Skadimi: i.expiryDate ?? "",
         Shënim: i.note,
         "Regjistruar më": new Date(i.createdAt).toLocaleDateString("sq-AL"),
       })),
@@ -208,7 +268,30 @@ function RegistrationsContent() {
               <UserPlus className="size-4 text-primary" /> Regjistro person
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <input
+              ref={passportRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (f) await scanPassport(await fileToDataUrl(f));
+              }}
+            />
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3">
+              <ScanLine className="size-8 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">Skano pasaportën — plotësohet automatikisht</p>
+                <p className="text-xs text-muted-foreground">Emri, nr. i pasaportës, datëlindja, skadimi dhe fotoja e personit.</p>
+              </div>
+              <Button type="button" size="lg" onClick={() => setCameraOpen(true)} disabled={scanning}>
+                {scanning ? <Loader2 className="animate-spin" /> : <Camera />} Skano me kamerë
+              </Button>
+              <Button type="button" size="lg" variant="outline" onClick={() => passportRef.current?.click()} disabled={scanning}>
+                <Upload /> Ngarko foto pasaporte
+              </Button>
+            </div>
             <form
               className="grid gap-3 md:grid-cols-6"
               onSubmit={(e) => {
@@ -216,6 +299,14 @@ function RegistrationsContent() {
                 add();
               }}
             >
+              {form.photo && (
+                <div className="flex items-center gap-3 md:col-span-6">
+                  <img src={form.photo} alt="Portreti" className="h-20 w-[62px] rounded-md border border-border object-cover" />
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setForm(({ photo: _p, ...rest }) => rest)}>
+                    Hiq foton
+                  </Button>
+                </div>
+              )}
               <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="r-name">Emri dhe mbiemri</Label>
                 <Input id="r-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -236,6 +327,18 @@ function RegistrationsContent() {
                 <Label htmlFor="r-note">Shënim</Label>
                 <Input id="r-note" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
               </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="r-pass">Nr. i pasaportës</Label>
+                <Input id="r-pass" value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="r-birth">Datëlindja</Label>
+                <Input id="r-birth" type="date" value={form.birthDate} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="r-exp">Skadimi i pasaportës</Label>
+                <Input id="r-exp" type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+              </div>
               <div className="md:col-span-6">
                 <Button type="submit">
                   <Plus /> Shto
@@ -244,6 +347,8 @@ function RegistrationsContent() {
             </form>
           </CardContent>
         </Card>
+
+        <CameraScanner open={cameraOpen} onOpenChange={setCameraOpen} onCapture={(d) => void scanPassport(d)} />
 
         <Card className="shadow-[var(--shadow-panel)]">
           <CardHeader className="flex flex-wrap items-center justify-between gap-3">
@@ -304,7 +409,17 @@ function RegistrationsContent() {
                         />
                       </TableCell>
                       <TableCell className="tabular-nums text-muted-foreground">{n + 1}</TableCell>
-                      <TableCell className="font-medium">{i.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {i.photo && <img src={i.photo} alt="" className="h-10 w-8 rounded border border-border object-cover" />}
+                          <div>
+                            {i.name}
+                            {i.passportNumber && (
+                              <div className="text-xs font-normal text-muted-foreground">{i.passportNumber}</div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell>{i.phone}</TableCell>
                       <TableCell>{i.city}</TableCell>
                       <TableCell className="tabular-nums">{i.year}</TableCell>
