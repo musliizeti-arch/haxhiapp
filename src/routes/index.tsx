@@ -511,6 +511,15 @@ function Index() {
         }}
       />
 
+      <PhotoGallery
+        open={galleryOpen}
+        records={records}
+        onClose={() => setGalleryOpen(false)}
+        onUpdate={(updated) => persist(records.map((r) => (r.id === updated.id ? updated : r)))}
+      />
+
+
+
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
