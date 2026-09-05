@@ -409,7 +409,17 @@ function RegistrationsContent() {
                         />
                       </TableCell>
                       <TableCell className="tabular-nums text-muted-foreground">{n + 1}</TableCell>
-                      <TableCell className="font-medium">{i.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {i.photo && <img src={i.photo} alt="" className="h-10 w-8 rounded border border-border object-cover" />}
+                          <div>
+                            {i.name}
+                            {i.passportNumber && (
+                              <div className="text-xs font-normal text-muted-foreground">{i.passportNumber}</div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell>{i.phone}</TableCell>
                       <TableCell>{i.city}</TableCell>
                       <TableCell className="tabular-nums">{i.year}</TableCell>
