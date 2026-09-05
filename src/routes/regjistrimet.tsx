@@ -302,7 +302,7 @@ function RegistrationsContent() {
               {form.photo && (
                 <div className="flex items-center gap-3 md:col-span-6">
                   <img src={form.photo} alt="Portreti" className="h-20 w-[62px] rounded-md border border-border object-cover" />
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setForm({ ...form, photo: undefined })}>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setForm(({ photo: _p, ...rest }) => rest)}>
                     Hiq foton
                   </Button>
                 </div>
