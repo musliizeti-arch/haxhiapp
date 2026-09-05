@@ -49,11 +49,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CameraScanner } from "@/components/CameraScanner";
+import { PhotoGallery } from "@/components/PhotoGallery";
 import { RecordEditor } from "@/components/RecordEditor";
 import { SplashScreen } from "@/components/SplashScreen";
 import { LoginGate, useAuthed } from "@/components/LoginGate";
 import { extractPassport } from "@/lib/passport.functions";
-import { openPhotoSheet } from "@/lib/photo-sheet";
 import { cn } from "@/lib/utils";
 import {
   FALLBACK_DEFAULTS,
@@ -131,6 +131,7 @@ function Index() {
   const [lang, setLang] = useState<Lang>("sq");
   const [defaults, setDefaults] = useState<ManifestDefaults>(FALLBACK_DEFAULTS);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [editing, setEditing] = useState<PassportRecord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -158,7 +159,7 @@ function Index() {
       id: crypto.randomUUID(),
       hash,
       fileName,
-      thumbnail: await shrinkImage(imageDataUrl, 220),
+      thumbnail: await shrinkImage(imageDataUrl, 900),
       createdAt: new Date().toISOString(),
       ...data,
       ...(photo ? { photo } : {}),
@@ -230,16 +231,11 @@ function Index() {
   }
 
   function exportPhotos() {
-    // Vetëm portreti i prerë nga pasaporta — asnjë e dhënë tjetër.
-    const items = records
-      .filter((r) => !!r.photo)
-      .map((r) => ({ src: r.photo!, name: "Foto" }));
-    if (!items.length) {
-      toast.warning("Nuk ka fotografi portret. Mund t'i ngarkoni te 'Redakto' për secilin person.");
+    if (!records.length) {
+      toast.warning("Nuk ka pasaporta të skanuara.");
       return;
     }
-    const ok = openPhotoSheet(items);
-    if (!ok) toast.error("Shfletuesi bllokoi skedën e re. Lejoni dritaret pop-up.");
+    setGalleryOpen(true);
   }
 
   const filtered = useMemo(() => {
