@@ -207,6 +207,9 @@ function RegistrationsContent() {
         Telefoni: i.phone,
         Qyteti: i.city,
         Viti: i.year,
+        "Nr. pasaportës": i.passportNumber ?? "",
+        Datëlindja: i.birthDate ?? "",
+        Skadimi: i.expiryDate ?? "",
         Shënim: i.note,
         "Regjistruar më": new Date(i.createdAt).toLocaleDateString("sq-AL"),
       })),
@@ -265,7 +268,30 @@ function RegistrationsContent() {
               <UserPlus className="size-4 text-primary" /> Regjistro person
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <input
+              ref={passportRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (f) await scanPassport(await fileToDataUrl(f));
+              }}
+            />
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3">
+              <ScanLine className="size-8 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">Skano pasaportën — plotësohet automatikisht</p>
+                <p className="text-xs text-muted-foreground">Emri, nr. i pasaportës, datëlindja, skadimi dhe fotoja e personit.</p>
+              </div>
+              <Button type="button" size="lg" onClick={() => setCameraOpen(true)} disabled={scanning}>
+                {scanning ? <Loader2 className="animate-spin" /> : <Camera />} Skano me kamerë
+              </Button>
+              <Button type="button" size="lg" variant="outline" onClick={() => passportRef.current?.click()} disabled={scanning}>
+                <Upload /> Ngarko foto pasaporte
+              </Button>
+            </div>
             <form
               className="grid gap-3 md:grid-cols-6"
               onSubmit={(e) => {
@@ -273,6 +299,14 @@ function RegistrationsContent() {
                 add();
               }}
             >
+              {form.photo && (
+                <div className="flex items-center gap-3 md:col-span-6">
+                  <img src={form.photo} alt="Portreti" className="h-20 w-[62px] rounded-md border border-border object-cover" />
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setForm({ ...form, photo: undefined })}>
+                    Hiq foton
+                  </Button>
+                </div>
+              )}
               <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="r-name">Emri dhe mbiemri</Label>
                 <Input id="r-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -293,6 +327,18 @@ function RegistrationsContent() {
                 <Label htmlFor="r-note">Shënim</Label>
                 <Input id="r-note" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
               </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="r-pass">Nr. i pasaportës</Label>
+                <Input id="r-pass" value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="r-birth">Datëlindja</Label>
+                <Input id="r-birth" type="date" value={form.birthDate} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="r-exp">Skadimi i pasaportës</Label>
+                <Input id="r-exp" type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+              </div>
               <div className="md:col-span-6">
                 <Button type="submit">
                   <Plus /> Shto
@@ -301,6 +347,8 @@ function RegistrationsContent() {
             </form>
           </CardContent>
         </Card>
+
+        <CameraScanner open={cameraOpen} onOpenChange={setCameraOpen} onCapture={(d) => void scanPassport(d)} />
 
         <Card className="shadow-[var(--shadow-panel)]">
           <CardHeader className="flex flex-wrap items-center justify-between gap-3">
