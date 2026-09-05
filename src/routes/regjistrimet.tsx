@@ -56,7 +56,27 @@ function RegistrationsPage() {
 }
 
 const nextYear = String(new Date().getFullYear() + 1);
-const EMPTY = { name: "", phone: "", city: "", year: nextYear, note: "" };
+type Form = {
+  name: string;
+  phone: string;
+  city: string;
+  year: string;
+  note: string;
+  passportNumber: string;
+  birthDate: string;
+  expiryDate: string;
+  photo?: string;
+};
+const EMPTY: Form = {
+  name: "",
+  phone: "",
+  city: "",
+  year: nextYear,
+  note: "",
+  passportNumber: "",
+  birthDate: "",
+  expiryDate: "",
+};
 
 function norm(v: string) {
   return v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
@@ -64,10 +84,14 @@ function norm(v: string) {
 
 function RegistrationsContent() {
   const [items, setItems] = useState<Registration[]>([]);
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState<Form>(EMPTY);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const passportRef = useRef<HTMLInputElement>(null);
+  const runExtract = useServerFn(extractPassport);
 
   useEffect(() => setItems(loadRegistrations()), []);
 
@@ -76,9 +100,38 @@ function RegistrationsContent() {
     saveRegistrations(next);
   }
 
+  /** Lexon pasaportën, pret portretin dhe mbush formularin automatikisht. */
+  async function scanPassport(rawDataUrl: string) {
+    setScanning(true);
+    try {
+      const imageDataUrl = await shrinkImage(rawDataUrl);
+      const data = await runExtract({ data: { imageDataUrl } });
+      const photo = await cropPhoto(imageDataUrl, data.photoBox);
+      const name = data.nameSq || data.nameEn || data.nameMk;
+      setForm((f) => ({
+        ...f,
+        name: name || f.name,
+        passportNumber: data.passportNumber || f.passportNumber,
+        birthDate: data.birthDate || f.birthDate,
+        expiryDate: data.expiryDate || f.expiryDate,
+        ...(photo ? { photo } : {}),
+      }));
+      toast.success(name ? `U lexua: ${name} — kontrolloni dhe shtypni "Shto".` : "Pasaporta u lexua pjesërisht.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gabim gjatë leximit të pasaportës.");
+    } finally {
+      setScanning(false);
+      if (passportRef.current) passportRef.current.value = "";
+    }
+  }
+
   function add() {
     if (!form.name.trim()) {
       toast.warning("Shkruani emrin e personit.");
+      return;
+    }
+    if (form.passportNumber && items.some((i) => i.passportNumber && i.passportNumber === form.passportNumber)) {
+      toast.warning("Kjo pasaportë është regjistruar më parë.");
       return;
     }
     persist([{ id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...form }, ...items]);
