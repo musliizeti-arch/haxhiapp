@@ -1,3 +1,5 @@
+import { pushState } from "@/lib/cloud";
+
 export type Leader = {
   id: string;
   name: string;
@@ -30,6 +32,7 @@ function read<T>(key: string): T[] {
 function write<T>(key: string, value: T[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(key, JSON.stringify(value));
+  pushState(key, value);
 }
 
 export const loadLeaders = () => read<Leader>(LEADERS_KEY);
@@ -76,6 +79,7 @@ function readMap(key: string): Assignments {
 function writeMap(key: string, value: Assignments) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(key, JSON.stringify(value));
+  pushState(key, value);
 }
 
 export const loadFlights = () => read<Flight>(FLIGHTS_KEY);

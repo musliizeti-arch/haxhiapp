@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isSignedIn, signIn } from "@/lib/passport-store";
+import { hydrateCloud } from "@/lib/cloud";
 import { Copyright } from "@/components/Copyright";
 import logo from "@/assets/haxhi-logo.png.asset.json";
 
@@ -11,8 +12,14 @@ export function useAuthed() {
   const [authed, setAuthed] = useState(false);
   const [ready, setReady] = useState(false);
   useEffect(() => {
+    let alive = true;
     setAuthed(isSignedIn());
-    setReady(true);
+    void hydrateCloud().finally(() => {
+      if (alive) setReady(true);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
   return { authed, ready, setAuthed };
 }
