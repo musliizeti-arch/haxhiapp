@@ -55,6 +55,7 @@ export function loadRecords(): PassportRecord[] {
 export function saveRecords(records: PassportRecord[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(records));
+  pushPassports(records);
 }
 
 /* ---------- Kredencialet (lokale) ---------- */
