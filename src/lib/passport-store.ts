@@ -33,6 +33,7 @@ export type PassportRecord = {
   scannedBy?: string;
   /* Fushat e manifestit të fluturimit */
   sex?: string;
+  residence?: string;
   docType?: string;
   departurePort?: string;
   arrivalPort?: string;

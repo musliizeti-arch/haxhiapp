@@ -8,6 +8,8 @@ export type Leader = {
   passportNumber: string;
   note: string;
   createdAt: string;
+  /** id-të e pasaportave të haxhinjve në grupin e tij */
+  memberIds?: string[];
 };
 
 export type RosterPerson = {
@@ -131,3 +133,18 @@ const REGISTRATIONS_KEY = "haxhi-registrations-v1";
 export const loadRegistrations = () => read<Registration>(REGISTRATIONS_KEY);
 export const saveRegistrations = (v: Registration[]) => write(REGISTRATIONS_KEY, v);
 
+
+/* ---------- VIP / me përparësi ---------- */
+
+export type VipEntry = {
+  id: string;
+  passportId?: string | undefined;
+  name: string;
+  category: string;
+  note: string;
+  createdAt: string;
+};
+
+const VIP_KEY = "haxhi-vip-v1";
+export const loadVip = () => read<VipEntry>(VIP_KEY);
+export const saveVip = (v: VipEntry[]) => write(VIP_KEY, v);

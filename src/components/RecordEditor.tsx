@@ -13,7 +13,7 @@ type Props = {
   onSave: (record: PassportRecord) => void;
 };
 
-type EditableKey = FieldKey | "sex" | "departurePort" | "arrivalPort" | "docType";
+type EditableKey = FieldKey | "sex" | "departurePort" | "arrivalPort" | "docType" | "residence";
 
 const fields: { key: EditableKey; label: string; type?: string }[] = [
   { key: "nameEn", label: "Emri (Anglisht)" },
@@ -25,6 +25,7 @@ const fields: { key: EditableKey; label: string; type?: string }[] = [
   { key: "issueDate", label: "Data e lëshimit", type: "date" },
   { key: "expiryDate", label: "Data e skadimit", type: "date" },
   { key: "nationality", label: "Shtetësia" },
+  { key: "residence", label: "Vendbanimi" },
   { key: "docType", label: "Lloji i dokumentit" },
   { key: "departurePort", label: "Niset nga" },
   { key: "arrivalPort", label: "Arrin në" },

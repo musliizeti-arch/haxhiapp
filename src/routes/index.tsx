@@ -5,7 +5,6 @@ import * as XLSX from "xlsx";
 import {
   Camera,
   FileSpreadsheet,
-  Images,
   Loader2,
   MessageCircle,
   Pencil,
@@ -303,14 +302,6 @@ function Index() {
         <a href="https://web.whatsapp.com" target="_blank" rel="noreferrer">
           <MessageCircle className="text-primary" /> WhatsApp Web
         </a>
-      </Button>
-      <Button
-        variant="outline"
-        className="rounded-full"
-        onClick={exportPhotos}
-        disabled={!records.length}
-      >
-        <Images /> Fotot
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
