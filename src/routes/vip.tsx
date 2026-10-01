@@ -41,7 +41,7 @@ function Content() {
   const [records, setRecords] = useState<PassportRecord[]>([]);
   const [passportId, setPassportId] = useState("");
   const [name, setName] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState<string>(CATEGORIES[0]!);
   const [note, setNote] = useState("");
 
   useEffect(() => {
