@@ -13,6 +13,7 @@ export const STATE_KEYS = [
   "haxhi-room-assign-v1",
   "haxhi-vaccines-v1",
   "haxhi-registrations-v1",
+  "haxhi-vip-v1",
 ] as const;
 
 let hydrating: Promise<void> | null = null;

@@ -1,6 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
+  Crown,
+  Images,
+  MapPin,
   ListChecks,
   MessageCircle,
   Plane,
@@ -18,11 +21,14 @@ import logo from "@/assets/haxhi-logo.png.asset.json";
 
 const NAV = [
   { to: "/", label: "Pasaportat", icon: ScanLine },
+  { to: "/fotot", label: "Fotot e haxhinjve", icon: Images },
+  { to: "/krahinat", label: "Rradhitja sipas krahinave", icon: MapPin },
   { to: "/lista", label: "Lista e emrave", icon: ListChecks },
   { to: "/grupet", label: "Grupe / Fluturime", icon: Plane },
   { to: "/vaksinat", label: "Vaksinat", icon: Syringe },
   { to: "/udheheqesit", label: "Udhëheqësit fetarë", icon: Users },
   { to: "/regjistrimet", label: "Regjistrimet e reja", icon: UserPlus },
+  { to: "/vip", label: "VIP / Përparësi", icon: Crown },
 ] as const;
 
 export function AppShell({

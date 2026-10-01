@@ -15,6 +15,7 @@ const FIELDS = [
   ["nationality", "nationality"],
   ["birth_date", "birthDate"],
   ["sex", "sex"],
+  ["residence", "residence"],
 ] as const;
 
 function fieldSchema(description: string) {
@@ -75,7 +76,7 @@ export const extractPassport = createServerFn({ method: "POST" })
               "when the name is readable. Same rule for name_sq (always Albanian latin orthography). " +
               "For every field return: value (dates ISO YYYY-MM-DD), raw_text (the literal characters you read on the image, " +
               "or the MRZ segment used), and confidence between 0 and 1 reflecting how clearly you could read it. " +
-              "sex = M or F. Use empty string and confidence 0 when unreadable. Never invent data. " +
+              "sex = M or F. residence = the holder's place of residence / city of address printed on the passport (or, if no address is printed, the place of birth), only the town/village name in Albanian latin spelling. Use empty string and confidence 0 when unreadable. Never invent data. " +
               "For photo_box measure precisely the edges of the portrait photo rectangle only.",
           },
           {
@@ -142,6 +143,7 @@ export const extractPassport = createServerFn({ method: "POST" })
       nationality: values["nationality"] ?? "",
       birthDate: values["birthDate"] ?? "",
       sex: (values["sex"] ?? "").toUpperCase().slice(0, 1),
+      residence: values["residence"] ?? "",
       confidence,
       rawText,
       photoBox: (() => {

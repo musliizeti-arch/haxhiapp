@@ -304,14 +304,6 @@ function Index() {
           <MessageCircle className="text-primary" /> WhatsApp Web
         </a>
       </Button>
-      <Button
-        variant="outline"
-        className="rounded-full"
-        onClick={exportPhotos}
-        disabled={!records.length}
-      >
-        <Images /> Fotot
-      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="rounded-full" disabled={!records.length}>
