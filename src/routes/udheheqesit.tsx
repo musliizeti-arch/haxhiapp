@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { LoginGate, useAuthed } from "@/components/LoginGate";
 import { loadLeaders, saveLeaders, type Leader } from "@/lib/haxhi-store";
+import { loadRecords, type PassportRecord } from "@/lib/passport-store";
 
 export const Route = createFileRoute("/udheheqesit")({
   head: () => ({
@@ -54,7 +55,18 @@ function LeadersContent() {
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [form, setForm] = useState(EMPTY);
 
-  useEffect(() => setLeaders(loadLeaders()), []);
+  const [records, setRecords] = useState<PassportRecord[]>([]);
+  useEffect(() => {
+    setLeaders(loadLeaders());
+    setRecords(loadRecords());
+  }, []);
+
+  const taken = new Map<string, string>();
+  for (const l of leaders) for (const m of l.memberIds ?? []) taken.set(m, l.id);
+
+  function setMembers(id: string, memberIds: string[]) {
+    persist(leaders.map((l) => (l.id === id ? { ...l, memberIds } : l)));
+  }
 
   function persist(next: Leader[]) {
     setLeaders(next);
@@ -176,6 +188,55 @@ function LeadersContent() {
             )}
           </CardContent>
         </Card>
+
+        {leaders.map((l) => {
+          const members = records.filter((r) => (l.memberIds ?? []).includes(r.id));
+          const free = records.filter((r) => !taken.has(r.id));
+          return (
+            <Card key={l.id} className="shadow-[var(--shadow-panel)]">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users className="size-4 text-primary" /> Grupi i {l.name}
+                  <span className="ml-auto tabular-nums text-primary">{members.length}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value=""
+                  onChange={(e) => e.target.value && setMembers(l.id, [...(l.memberIds ?? []), e.target.value])}
+                >
+                  <option value="">+ Shto haxhi në grup ({free.length} pa grup)</option>
+                  {free.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.nameSq || r.nameEn} {r.passportNumber && `(${r.passportNumber})`}
+                    </option>
+                  ))}
+                </select>
+                {members.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Grupi është bosh.</p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {members.map((r) => (
+                      <li key={r.id} className="flex items-center gap-3 py-1.5">
+                        {r.photo && <img src={r.photo} alt="" className="size-8 rounded object-cover" />}
+                        <span className="flex-1 truncate text-sm">{r.nameSq || r.nameEn}</span>
+                        <span className="font-mono text-xs text-muted-foreground">{r.passportNumber}</span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setMembers(l.id, (l.memberIds ?? []).filter((m) => m !== r.id))}
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </main>
     </div>
   );
