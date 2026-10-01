@@ -138,7 +138,7 @@ export const saveRegistrations = (v: Registration[]) => write(REGISTRATIONS_KEY,
 
 export type VipEntry = {
   id: string;
-  passportId?: string;
+  passportId?: string | undefined;
   name: string;
   category: string;
   note: string;
