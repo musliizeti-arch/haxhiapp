@@ -1,21 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { FileSpreadsheet, MapPin } from "lucide-react";
+import { FileSpreadsheet, MapPin, Plus, Trash2, UserRound, X } from "lucide-react";
 import * as XLSX from "xlsx";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppShell } from "@/components/AppShell";
 import { LoginGate, useAuthed } from "@/components/LoginGate";
-import { loadRecords, saveRecords, type PassportRecord } from "@/lib/passport-store";
+import { PersonSearch, personName } from "@/components/PersonSearch";
+import { loadRecords, type PassportRecord } from "@/lib/passport-store";
+import { loadRegions, saveRegions, type Region } from "@/lib/haxhi-store";
 
 export const Route = createFileRoute("/krahinat")({
   head: () => ({
     meta: [
       { title: "Rradhitja sipas krahinave — HAXHI.app" },
-      { name: "description", content: "Haxhinjtë e grupuar sipas vendbanimit të lexuar nga pasaporta." },
+      { name: "description", content: "Krahinat me udhëheqësin dhe haxhinjtë e secilës krahinë." },
       { property: "og:title", content: "Rradhitja sipas krahinave — HAXHI.app" },
-      { property: "og:description", content: "Grupimi i haxhinjve sipas vendbanimeve." },
+      { property: "og:description", content: "Grupimi manual i haxhinjve sipas krahinave." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -32,38 +35,49 @@ function Page() {
   );
 }
 
-const UNKNOWN = "Pa vendbanim";
-
 function Content() {
   const [records, setRecords] = useState<PassportRecord[]>([]);
-  useEffect(() => setRecords(loadRecords()), []);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [newName, setNewName] = useState("");
+  useEffect(() => {
+    setRecords(loadRecords());
+    setRegions(loadRegions());
+  }, []);
 
-  const groups = useMemo(() => {
-    const map = new Map<string, PassportRecord[]>();
-    for (const r of records) {
-      const k = (r.residence ?? "").trim() || UNKNOWN;
-      const key = k === UNKNOWN ? k : k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
-      map.set(key, [...(map.get(key) ?? []), r]);
+  const byId = useMemo(() => new Map(records.map((r) => [r.id, r])), [records]);
+  const assigned = useMemo(() => new Set(regions.flatMap((r) => r.memberIds)), [regions]);
+
+  function persist(next: Region[]) {
+    setRegions(next);
+    saveRegions(next);
+  }
+  const update = (id: string, patch: Partial<Region>) =>
+    persist(regions.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+
+  function addRegion() {
+    const name = newName.trim();
+    if (!name) return;
+    if (regions.some((r) => r.name.toLowerCase() === name.toLowerCase())) {
+      toast.error("Kjo krahinë ekziston.");
+      return;
     }
-    return [...map.entries()].sort((a, b) =>
-      a[0] === UNKNOWN ? 1 : b[0] === UNKNOWN ? -1 : a[0].localeCompare(b[0], "sq"),
-    );
-  }, [records]);
-
-  function setResidence(id: string, residence: string) {
-    const next = records.map((r) => (r.id === id ? { ...r, residence } : r));
-    setRecords(next);
-    saveRecords(next);
+    persist([...regions, { id: crypto.randomUUID(), name, leader: "", memberIds: [] }]);
+    setNewName("");
   }
 
   function exportExcel() {
-    const rows = groups.flatMap(([place, list]) =>
-      list.map((r) => ({
-        Vendbanimi: place,
-        Emri: r.nameSq || r.nameEn,
-        "Nr. pasaportës": r.passportNumber,
-        Datëlindja: r.birthDate,
-      })),
+    const rows = regions.flatMap((g) =>
+      g.memberIds.map((id, i) => {
+        const r = byId.get(id);
+        return {
+          Krahina: g.name,
+          Udhëheqësi: g.leader,
+          "Nr.": i + 1,
+          Emri: r ? personName(r) : "",
+          "Nr. pasaportës": r?.passportNumber ?? "",
+          Datëlindja: r?.birthDate ?? "",
+        };
+      }),
     );
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(rows), "Krahinat");
@@ -73,38 +87,80 @@ function Content() {
   return (
     <AppShell
       title="Rradhitja sipas krahinave"
-      subtitle={`${groups.length} vendbanime • ${records.length} haxhinj`}
+      subtitle={`${regions.length} krahina • ${assigned.size} nga ${records.length} haxhinj të ndarë`}
       actions={
-        <Button className="rounded-full" onClick={exportExcel} disabled={!records.length}>
+        <Button className="rounded-full" onClick={exportExcel} disabled={!regions.length}>
           <FileSpreadsheet /> Excel
         </Button>
       }
     >
-      {records.length === 0 ? (
-        <p className="py-16 text-center text-sm text-muted-foreground">Ende nuk ka haxhinj të skanuar.</p>
+      <div className="mb-5 flex max-w-md gap-2">
+        <Input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addRegion()}
+          placeholder="Emri i krahinës (p.sh. Gostivar)"
+        />
+        <Button onClick={addRegion}>
+          <Plus /> Shto krahinë
+        </Button>
+      </div>
+
+      {regions.length === 0 ? (
+        <p className="py-16 text-center text-sm text-muted-foreground">
+          Shtoni krahinën e parë më lart.
+        </p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          {groups.map(([place, list]) => (
-            <Card key={place}>
-              <CardHeader className="pb-2">
+          {regions.map((g) => (
+            <Card key={g.id}>
+              <CardHeader className="space-y-3 pb-2">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <MapPin className="size-4 text-primary" /> {place}
-                  <span className="ml-auto text-sm tabular-nums text-primary">{list.length}</span>
+                  <MapPin className="size-4 text-primary" /> {g.name}
+                  <span className="ml-auto text-sm tabular-nums text-primary">{g.memberIds.length}</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Fshi krahinën"
+                    onClick={() => confirm(`Të fshihet krahina ${g.name}?`) && persist(regions.filter((r) => r.id !== g.id))}
+                  >
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
                 </CardTitle>
+                <div className="flex items-center gap-2">
+                  <UserRound className="size-4 text-muted-foreground" />
+                  <Input
+                    className="h-9"
+                    placeholder="Emri i udhëheqësit të krahinës"
+                    defaultValue={g.leader}
+                    onBlur={(e) => e.target.value !== g.leader && update(g.id, { leader: e.target.value })}
+                  />
+                </div>
+                <PersonSearch
+                  records={records}
+                  exclude={assigned}
+                  onPick={(id) => update(g.id, { memberIds: [...g.memberIds, id] })}
+                />
               </CardHeader>
-              <CardContent className="space-y-2">
-                {list.map((r) => (
-                  <div key={r.id} className="flex items-center gap-2">
-                    {r.photo && <img src={r.photo} alt="" className="size-8 rounded object-cover" />}
-                    <span className="min-w-0 flex-1 truncate text-sm">{r.nameSq || r.nameEn}</span>
-                    <Input
-                      className="h-8 w-36 text-xs"
-                      placeholder="Vendbanimi"
-                      defaultValue={r.residence ?? ""}
-                      onBlur={(e) => e.target.value !== (r.residence ?? "") && setResidence(r.id, e.target.value)}
-                    />
-                  </div>
-                ))}
+              <CardContent className="space-y-1.5">
+                {g.memberIds.map((id, i) => {
+                  const r = byId.get(id);
+                  return (
+                    <div key={id} className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-secondary">
+                      <span className="w-6 text-xs tabular-nums text-muted-foreground">{i + 1}.</span>
+                      {r?.photo && <img src={r.photo} alt="" className="size-7 rounded object-cover" />}
+                      <span className="min-w-0 flex-1 truncate text-sm">{r ? personName(r) : "—"}</span>
+                      <span className="text-xs text-muted-foreground">{r?.passportNumber}</span>
+                      <button
+                        type="button"
+                        aria-label="Hiq"
+                        onClick={() => update(g.id, { memberIds: g.memberIds.filter((x) => x !== id) })}
+                      >
+                        <X className="size-4 text-muted-foreground hover:text-destructive" />
+                      </button>
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
           ))}
