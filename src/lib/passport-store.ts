@@ -1,4 +1,6 @@
-import { pushPassports } from "@/lib/cloud";
+import { getPassportCache, pushPassports, setPassportCache } from "@/lib/cloud";
+
+export const MAX_PASSPORTS = 600;
 
 export type FieldKey =
   | "nameEn"
@@ -47,6 +49,8 @@ const SESSION_KEY = "haxhi-session-v1";
 
 export function loadRecords(): PassportRecord[] {
   if (typeof window === "undefined") return [];
+  const cached = getPassportCache();
+  if (cached) return cached as PassportRecord[];
   try {
     const raw = window.localStorage.getItem(KEY);
     return raw ? (JSON.parse(raw) as PassportRecord[]) : [];
@@ -57,7 +61,12 @@ export function loadRecords(): PassportRecord[] {
 
 export function saveRecords(records: PassportRecord[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(records));
+  setPassportCache(records);
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    /* ignore */
+  }
   pushPassports(records);
 }
 
