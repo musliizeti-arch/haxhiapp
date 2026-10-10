@@ -148,3 +148,24 @@ export type VipEntry = {
 const VIP_KEY = "haxhi-vip-v1";
 export const loadVip = () => read<VipEntry>(VIP_KEY);
 export const saveVip = (v: VipEntry[]) => write(VIP_KEY, v);
+
+/* ---------- Krahinat (manuale) ---------- */
+
+export type Region = { id: string; name: string; leader: string; memberIds: string[] };
+const REGIONS_KEY = "haxhi-regions-v1";
+export const loadRegions = () => read<Region>(REGIONS_KEY);
+export const saveRegions = (v: Region[]) => write(REGIONS_KEY, v);
+
+/* ---------- Dhomat e hoteleve (Mekë / Medinë) ---------- */
+
+export type HotelId = "meke" | "medine";
+export type HotelRoom = {
+  id: string;
+  hotel: HotelId;
+  number: string;
+  capacity: number;
+  memberIds: string[];
+};
+const HOTEL_ROOMS_KEY = "haxhi-hotel-rooms-v1";
+export const loadHotelRooms = () => read<HotelRoom>(HOTEL_ROOMS_KEY);
+export const saveHotelRooms = (v: HotelRoom[]) => write(HOTEL_ROOMS_KEY, v);

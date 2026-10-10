@@ -73,6 +73,7 @@ import {
   hashDataUrl,
   isExpiringSoon,
   loadRecords,
+  MAX_PASSPORTS,
   monthsUntil,
   saveRecords,
   shrinkImage,
@@ -188,7 +189,15 @@ function Index() {
   /** Ngarkim masiv — pa limit fotosh, me deduplikim sipas së njëjtës foto. */
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;
-    const list = Array.from(files);
+    const existingCount = loadRecords().length;
+    const room = Math.max(0, MAX_PASSPORTS - existingCount);
+    if (room === 0) {
+      toast.error(`Limiti prej ${MAX_PASSPORTS} pasaportash është arritur.`);
+      return;
+    }
+    const all = Array.from(files);
+    const list = all.slice(0, room);
+    if (all.length > room) toast.warning(`Do të përpunohen vetëm ${room} foto (limiti ${MAX_PASSPORTS}).`);
     setBusy(true);
     setProgress({ done: 0, total: list.length });
     const existing = loadRecords();
@@ -344,7 +353,7 @@ function Index() {
           <BigAction
             icon={<Upload className="size-10" />}
             title="Ngarko foto"
-            text="Ngarkim masiv pa limit — fotot e njëjta anashkalohen."
+            text="Ngarkim masiv deri në 600 pasaporta — fotot e njëjta anashkalohen."
             onClick={() => fileRef.current?.click()}
             disabled={busy}
             secondary

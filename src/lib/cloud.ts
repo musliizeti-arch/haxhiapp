@@ -14,7 +14,32 @@ export const STATE_KEYS = [
   "haxhi-vaccines-v1",
   "haxhi-registrations-v1",
   "haxhi-vip-v1",
+  "haxhi-regions-v1",
+  "haxhi-hotel-rooms-v1",
+  "haxhi-vaccine-template-v1",
 ] as const;
+
+/** Pasaportat mbahen në memorie (localStorage ka limit ~5MB që ndalonte në ~167). */
+let passportCache: unknown[] | null = null;
+export const getPassportCache = () => passportCache;
+export const setPassportCache = (v: unknown[]) => {
+  passportCache = v;
+};
+
+async function fetchAllPassports() {
+  const out: unknown[] = [];
+  for (let from = 0; ; from += 100) {
+    const { data, error } = await supabase
+      .from("passports")
+      .select("id,data")
+      .order("created_at", { ascending: false })
+      .range(from, from + 99);
+    if (error) throw error;
+    out.push(...(data ?? []).map((r) => r.data));
+    if (!data || data.length < 100) break;
+  }
+  return out;
+}
 
 let hydrating: Promise<void> | null = null;
 
@@ -40,9 +65,9 @@ export function hydrateCloud(): Promise<void> {
   if (hydrating) return hydrating;
   hydrating = (async () => {
     try {
-      const [stateRes, passRes] = await Promise.all([
+      const [stateRes, remoteRecords] = await Promise.all([
         supabase.from("app_state").select("key,data"),
-        supabase.from("passports").select("id,data"),
+        fetchAllPassports(),
       ]);
 
       const rows = stateRes.data ?? [];
@@ -57,12 +82,15 @@ export function hydrateCloud(): Promise<void> {
         }
       }
 
-      const remoteRecords = (passRes.data ?? []).map((r) => r.data);
       if (remoteRecords.length > 0) {
-        window.localStorage.setItem(PASSPORTS_KEY, JSON.stringify(remoteRecords));
+        passportCache = remoteRecords;
+        window.localStorage.removeItem(PASSPORTS_KEY);
       } else {
         const local = localJson(PASSPORTS_KEY);
-        if (Array.isArray(local) && local.length > 0) pushPassports(local as { id: string }[]);
+        if (Array.isArray(local) && local.length > 0) {
+          passportCache = local;
+          pushPassports(local as { id: string }[]);
+        }
       }
     } catch {
       /* offline — vazhdo me të dhënat lokale */

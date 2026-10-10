@@ -28,6 +28,7 @@ import { loadRecords } from "@/lib/passport-store";
 import { loadRoster } from "@/lib/haxhi-store";
 import { loadVaccines, saveVaccines, type VaccineEntry } from "@/lib/haxhi-store";
 import { cn } from "@/lib/utils";
+import { VaccineTemplate } from "@/components/VaccineTemplate";
 
 export const Route = createFileRoute("/vaksinat")({
   head: () => ({
@@ -163,6 +164,7 @@ function VaccinesContent() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-6 py-8">
+        <VaccineTemplate />
         <Card className="rounded-2xl border-border/70 shadow-[var(--shadow-panel)]">
           <CardHeader>
             <CardTitle className="text-base">Shto vaksinë</CardTitle>

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DhomatRouteImport } from './routes/dhomat'
 import { Route as FototRouteImport } from './routes/fotot'
 import { Route as GrupetRouteImport } from './routes/grupet'
 import { Route as KrahinatRouteImport } from './routes/krahinat'
@@ -23,6 +24,11 @@ import { Route as VipRouteImport } from './routes/vip'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DhomatRoute = DhomatRouteImport.update({
+  id: '/dhomat',
+  path: '/dhomat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FototRoute = FototRouteImport.update({
@@ -73,6 +79,7 @@ const VipRoute = VipRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dhomat': typeof DhomatRoute
   '/fotot': typeof FototRoute
   '/grupet': typeof GrupetRoute
   '/krahinat': typeof KrahinatRoute
@@ -85,6 +92,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dhomat': typeof DhomatRoute
   '/fotot': typeof FototRoute
   '/grupet': typeof GrupetRoute
   '/krahinat': typeof KrahinatRoute
@@ -98,6 +106,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/dhomat': typeof DhomatRoute
   '/fotot': typeof FototRoute
   '/grupet': typeof GrupetRoute
   '/krahinat': typeof KrahinatRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dhomat'
     | '/fotot'
     | '/grupet'
     | '/krahinat'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dhomat'
     | '/fotot'
     | '/grupet'
     | '/krahinat'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/dhomat'
     | '/fotot'
     | '/grupet'
     | '/krahinat'
@@ -149,6 +161,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DhomatRoute: typeof DhomatRoute
   FototRoute: typeof FototRoute
   GrupetRoute: typeof GrupetRoute
   KrahinatRoute: typeof KrahinatRoute
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dhomat': {
+      id: '/dhomat'
+      path: '/dhomat'
+      fullPath: '/dhomat'
+      preLoaderRoute: typeof DhomatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fotot': {
@@ -237,6 +257,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DhomatRoute: DhomatRoute,
   FototRoute: FototRoute,
   GrupetRoute: GrupetRoute,
   KrahinatRoute: KrahinatRoute,

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
+  BedDouble,
   Crown,
   Images,
   MapPin,
@@ -24,6 +25,7 @@ const NAV = [
   { to: "/fotot", label: "Fotot e haxhinjve", icon: Images },
   { to: "/krahinat", label: "Rradhitja sipas krahinave", icon: MapPin },
   { to: "/lista", label: "Lista e emrave", icon: ListChecks },
+  { to: "/dhomat", label: "Dhomat (Mekë / Medinë)", icon: BedDouble },
   { to: "/grupet", label: "Grupe / Fluturime", icon: Plane },
   { to: "/vaksinat", label: "Vaksinat", icon: Syringe },
   { to: "/udheheqesit", label: "Udhëheqësit fetarë", icon: Users },
