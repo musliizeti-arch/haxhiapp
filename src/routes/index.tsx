@@ -73,6 +73,7 @@ import {
   hashDataUrl,
   isExpiringSoon,
   loadRecords,
+  MAX_PASSPORTS,
   monthsUntil,
   saveRecords,
   shrinkImage,
