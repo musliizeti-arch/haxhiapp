@@ -169,3 +169,30 @@ export type HotelRoom = {
 const HOTEL_ROOMS_KEY = "haxhi-hotel-rooms-v1";
 export const loadHotelRooms = () => read<HotelRoom>(HOTEL_ROOMS_KEY);
 export const saveHotelRooms = (v: HotelRoom[]) => write(HOTEL_ROOMS_KEY, v);
+
+/* ---------- Vizat ---------- */
+
+export type VisaStatus = "issued" | "pending" | "missing";
+export type VisaInfo = {
+  status: VisaStatus;
+  number?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  note?: string;
+  file?: string;
+  fileName?: string;
+};
+const VISAS_KEY = "haxhi-visas-v1";
+export function loadVisas(): Record<string, VisaInfo> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(window.localStorage.getItem(VISAS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+export function saveVisas(v: Record<string, VisaInfo>) {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.setItem(VISAS_KEY, JSON.stringify(v)); } catch { /* full */ }
+  pushState(VISAS_KEY, v);
+}
