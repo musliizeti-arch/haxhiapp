@@ -81,7 +81,7 @@ function Content() {
 
   function applyPending() {
     const map = new Map(pending.filter((p) => p.matchId).map((p) => [p.matchId, p.dataUrl]));
-    const next = records.map((r) => (map.has(r.id) ? { ...r, photo: map.get(r.id) } : r));
+    const next = records.map((r) => (map.has(r.id) ? { ...r, photo: map.get(r.id)! } : r));
     setRecords(next);
     saveRecords(next);
     setPending([]);
