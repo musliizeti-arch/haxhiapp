@@ -10,6 +10,8 @@ import {
   Plane,
   ScanLine,
   Settings,
+  Stamp,
+  Send,
   Syringe,
   UserPlus,
   Users,
@@ -28,9 +30,11 @@ const NAV = [
   { to: "/dhomat", label: "Dhomat (Mekë / Medinë)", icon: BedDouble },
   { to: "/grupet", label: "Grupe / Fluturime", icon: Plane },
   { to: "/vaksinat", label: "Vaksinat", icon: Syringe },
+  { to: "/vizat", label: "Vizat & Nusuk", icon: Stamp },
   { to: "/udheheqesit", label: "Udhëheqësit fetarë", icon: Users },
   { to: "/regjistrimet", label: "Regjistrimet e reja", icon: UserPlus },
   { to: "/vip", label: "VIP / Përparësi", icon: Crown },
+  { to: "/sms", label: "Dërgo SMS", icon: Send },
 ] as const;
 
 export function AppShell({
