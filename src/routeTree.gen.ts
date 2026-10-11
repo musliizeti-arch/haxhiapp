@@ -17,9 +17,11 @@ import { Route as KrahinatRouteImport } from './routes/krahinat'
 import { Route as ListaRouteImport } from './routes/lista'
 import { Route as RegjistrimetRouteImport } from './routes/regjistrimet'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SmsRouteImport } from './routes/sms'
 import { Route as UdheheqesitRouteImport } from './routes/udheheqesit'
 import { Route as VaksinatRouteImport } from './routes/vaksinat'
 import { Route as VipRouteImport } from './routes/vip'
+import { Route as VizatRouteImport } from './routes/vizat'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -61,6 +63,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SmsRoute = SmsRouteImport.update({
+  id: '/sms',
+  path: '/sms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UdheheqesitRoute = UdheheqesitRouteImport.update({
   id: '/udheheqesit',
   path: '/udheheqesit',
@@ -76,6 +83,11 @@ const VipRoute = VipRouteImport.update({
   path: '/vip',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VizatRoute = VizatRouteImport.update({
+  id: '/vizat',
+  path: '/vizat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -86,9 +98,11 @@ export interface FileRoutesByFullPath {
   '/lista': typeof ListaRoute
   '/regjistrimet': typeof RegjistrimetRoute
   '/settings': typeof SettingsRoute
+  '/sms': typeof SmsRoute
   '/udheheqesit': typeof UdheheqesitRoute
   '/vaksinat': typeof VaksinatRoute
   '/vip': typeof VipRoute
+  '/vizat': typeof VizatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -99,9 +113,11 @@ export interface FileRoutesByTo {
   '/lista': typeof ListaRoute
   '/regjistrimet': typeof RegjistrimetRoute
   '/settings': typeof SettingsRoute
+  '/sms': typeof SmsRoute
   '/udheheqesit': typeof UdheheqesitRoute
   '/vaksinat': typeof VaksinatRoute
   '/vip': typeof VipRoute
+  '/vizat': typeof VizatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -113,9 +129,11 @@ export interface FileRoutesById {
   '/lista': typeof ListaRoute
   '/regjistrimet': typeof RegjistrimetRoute
   '/settings': typeof SettingsRoute
+  '/sms': typeof SmsRoute
   '/udheheqesit': typeof UdheheqesitRoute
   '/vaksinat': typeof VaksinatRoute
   '/vip': typeof VipRoute
+  '/vizat': typeof VizatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -128,9 +146,11 @@ export interface FileRouteTypes {
     | '/lista'
     | '/regjistrimet'
     | '/settings'
+    | '/sms'
     | '/udheheqesit'
     | '/vaksinat'
     | '/vip'
+    | '/vizat'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -141,9 +161,11 @@ export interface FileRouteTypes {
     | '/lista'
     | '/regjistrimet'
     | '/settings'
+    | '/sms'
     | '/udheheqesit'
     | '/vaksinat'
     | '/vip'
+    | '/vizat'
   id:
     | '__root__'
     | '/'
@@ -154,9 +176,11 @@ export interface FileRouteTypes {
     | '/lista'
     | '/regjistrimet'
     | '/settings'
+    | '/sms'
     | '/udheheqesit'
     | '/vaksinat'
     | '/vip'
+    | '/vizat'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -168,9 +192,11 @@ export interface RootRouteChildren {
   ListaRoute: typeof ListaRoute
   RegjistrimetRoute: typeof RegjistrimetRoute
   SettingsRoute: typeof SettingsRoute
+  SmsRoute: typeof SmsRoute
   UdheheqesitRoute: typeof UdheheqesitRoute
   VaksinatRoute: typeof VaksinatRoute
   VipRoute: typeof VipRoute
+  VizatRoute: typeof VizatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -231,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sms': {
+      id: '/sms'
+      path: '/sms'
+      fullPath: '/sms'
+      preLoaderRoute: typeof SmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/udheheqesit': {
       id: '/udheheqesit'
       path: '/udheheqesit'
@@ -252,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VipRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vizat': {
+      id: '/vizat'
+      path: '/vizat'
+      fullPath: '/vizat'
+      preLoaderRoute: typeof VizatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -264,9 +304,11 @@ const rootRouteChildren: RootRouteChildren = {
   ListaRoute: ListaRoute,
   RegjistrimetRoute: RegjistrimetRoute,
   SettingsRoute: SettingsRoute,
+  SmsRoute: SmsRoute,
   UdheheqesitRoute: UdheheqesitRoute,
   VaksinatRoute: VaksinatRoute,
   VipRoute: VipRoute,
+  VizatRoute: VizatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
