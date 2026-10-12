@@ -208,7 +208,7 @@ function Index() {
     const failedNames: string[] = [];
 
 
-    const CONCURRENCY = 3;
+    const CONCURRENCY = 2;
     let cursor = 0;
     async function worker() {
       while (cursor < list.length) {
@@ -247,6 +247,8 @@ function Index() {
         (duplicates ? ` • ${duplicates} të dyfishta u anashkaluan` : "") +
         (failed ? ` • ${failed} dështuan` : ""),
     );
+    if (failedNames.length)
+      toast.error(`Nuk u lexuan ${failedNames.length} foto: ${failedNames.join(", ")} — provoni t'i ngarkoni përsëri.`, { duration: 15000 });
   }
 
   function exportPhotos() {
