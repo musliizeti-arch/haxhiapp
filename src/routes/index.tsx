@@ -205,6 +205,8 @@ function Index() {
     const added: PassportRecord[] = [];
     let duplicates = 0;
     let failed = 0;
+    const failedNames: string[] = [];
+
 
     const CONCURRENCY = 3;
     let cursor = 0;
@@ -212,13 +214,22 @@ function Index() {
       while (cursor < list.length) {
         const index = cursor++;
         const file = list[index]!;
-        try {
-          const dataUrl = await fileToDataUrl(file);
-          const record = await buildRecord(dataUrl, file.name, seen);
-          if (record) added.push(record);
-          else duplicates++;
-        } catch {
-          failed++;
+        let ok = false;
+        for (let attempt = 0; attempt < 4 && !ok; attempt++) {
+          try {
+            if (attempt > 0) await new Promise((r) => setTimeout(r, 2000 * attempt));
+            const dataUrl = await fileToDataUrl(file);
+            const record = await buildRecord(dataUrl, file.name, seen);
+            if (record) added.push(record);
+            else duplicates++;
+            ok = true;
+          } catch (e) {
+            if (attempt === 3) {
+              failed++;
+              failedNames.push(file.name);
+              console.warn("[upload] dështoi", file.name, e);
+            }
+          }
         }
         setProgress({ done: index + 1, total: list.length });
         const snapshot = [...added].reverse();
