@@ -18,6 +18,7 @@ export const STATE_KEYS = [
   "haxhi-hotel-rooms-v1",
   "haxhi-vaccine-template-v1",
   "haxhi-visas-v1",
+  "haxhi-payments-v1",
 ] as const;
 
 /** Pasaportat mbahen në memorie (localStorage ka limit ~5MB që ndalonte në ~167). */

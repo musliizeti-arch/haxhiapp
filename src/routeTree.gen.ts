@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DhomatRouteImport } from './routes/dhomat'
+import { Route as FletepagesatRouteImport } from './routes/fletepagesat'
 import { Route as FototRouteImport } from './routes/fotot'
 import { Route as GrupetRouteImport } from './routes/grupet'
 import { Route as KrahinatRouteImport } from './routes/krahinat'
-import { Route as ListaRouteImport } from './routes/lista'
 import { Route as RegjistrimetRouteImport } from './routes/regjistrimet'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SmsRouteImport } from './routes/sms'
@@ -33,6 +33,11 @@ const DhomatRoute = DhomatRouteImport.update({
   path: '/dhomat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FletepagesatRoute = FletepagesatRouteImport.update({
+  id: '/fletepagesat',
+  path: '/fletepagesat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FototRoute = FototRouteImport.update({
   id: '/fotot',
   path: '/fotot',
@@ -46,11 +51,6 @@ const GrupetRoute = GrupetRouteImport.update({
 const KrahinatRoute = KrahinatRouteImport.update({
   id: '/krahinat',
   path: '/krahinat',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ListaRoute = ListaRouteImport.update({
-  id: '/lista',
-  path: '/lista',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegjistrimetRoute = RegjistrimetRouteImport.update({
@@ -92,10 +92,10 @@ const VizatRoute = VizatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dhomat': typeof DhomatRoute
+  '/fletepagesat': typeof FletepagesatRoute
   '/fotot': typeof FototRoute
   '/grupet': typeof GrupetRoute
   '/krahinat': typeof KrahinatRoute
-  '/lista': typeof ListaRoute
   '/regjistrimet': typeof RegjistrimetRoute
   '/settings': typeof SettingsRoute
   '/sms': typeof SmsRoute
@@ -107,10 +107,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dhomat': typeof DhomatRoute
+  '/fletepagesat': typeof FletepagesatRoute
   '/fotot': typeof FototRoute
   '/grupet': typeof GrupetRoute
   '/krahinat': typeof KrahinatRoute
-  '/lista': typeof ListaRoute
   '/regjistrimet': typeof RegjistrimetRoute
   '/settings': typeof SettingsRoute
   '/sms': typeof SmsRoute
@@ -123,10 +123,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dhomat': typeof DhomatRoute
+  '/fletepagesat': typeof FletepagesatRoute
   '/fotot': typeof FototRoute
   '/grupet': typeof GrupetRoute
   '/krahinat': typeof KrahinatRoute
-  '/lista': typeof ListaRoute
   '/regjistrimet': typeof RegjistrimetRoute
   '/settings': typeof SettingsRoute
   '/sms': typeof SmsRoute
@@ -140,10 +140,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/dhomat'
+    | '/fletepagesat'
     | '/fotot'
     | '/grupet'
     | '/krahinat'
-    | '/lista'
     | '/regjistrimet'
     | '/settings'
     | '/sms'
@@ -155,10 +155,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/dhomat'
+    | '/fletepagesat'
     | '/fotot'
     | '/grupet'
     | '/krahinat'
-    | '/lista'
     | '/regjistrimet'
     | '/settings'
     | '/sms'
@@ -170,10 +170,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/dhomat'
+    | '/fletepagesat'
     | '/fotot'
     | '/grupet'
     | '/krahinat'
-    | '/lista'
     | '/regjistrimet'
     | '/settings'
     | '/sms'
@@ -186,10 +186,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DhomatRoute: typeof DhomatRoute
+  FletepagesatRoute: typeof FletepagesatRoute
   FototRoute: typeof FototRoute
   GrupetRoute: typeof GrupetRoute
   KrahinatRoute: typeof KrahinatRoute
-  ListaRoute: typeof ListaRoute
   RegjistrimetRoute: typeof RegjistrimetRoute
   SettingsRoute: typeof SettingsRoute
   SmsRoute: typeof SmsRoute
@@ -215,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DhomatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fletepagesat': {
+      id: '/fletepagesat'
+      path: '/fletepagesat'
+      fullPath: '/fletepagesat'
+      preLoaderRoute: typeof FletepagesatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/fotot': {
       id: '/fotot'
       path: '/fotot'
@@ -234,13 +241,6 @@ declare module '@tanstack/react-router' {
       path: '/krahinat'
       fullPath: '/krahinat'
       preLoaderRoute: typeof KrahinatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lista': {
-      id: '/lista'
-      path: '/lista'
-      fullPath: '/lista'
-      preLoaderRoute: typeof ListaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/regjistrimet': {
@@ -298,10 +298,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DhomatRoute: DhomatRoute,
+  FletepagesatRoute: FletepagesatRoute,
   FototRoute: FototRoute,
   GrupetRoute: GrupetRoute,
   KrahinatRoute: KrahinatRoute,
-  ListaRoute: ListaRoute,
   RegjistrimetRoute: RegjistrimetRoute,
   SettingsRoute: SettingsRoute,
   SmsRoute: SmsRoute,

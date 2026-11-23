@@ -15,6 +15,8 @@ import {
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
+import { FolderUp } from "lucide-react";
+import { loadPayments, savePayments, type PaymentSlip } from "@/lib/haxhi-store";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,6 +137,7 @@ function Index() {
   const [editing, setEditing] = useState<PassportRecord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const folderRef = useRef<HTMLInputElement>(null);
   const runExtract = useServerFn(extractPassport);
 
   useEffect(() => {
@@ -155,7 +158,7 @@ function Index() {
     const data = await runExtract({ data: { imageDataUrl } });
     const photo = await cropPhoto(imageDataUrl, data.photoBox);
     seen.add(hash);
-    const record: PassportRecord = {
+    const record: PassportRecord & { docType?: string } = {
       id: crypto.randomUUID(),
       hash,
       fileName,
@@ -195,7 +198,7 @@ function Index() {
       toast.error(`Limiti prej ${MAX_PASSPORTS} pasaportash është arritur.`);
       return;
     }
-    const all = Array.from(files);
+    const all = Array.from(files).filter((f) => f.type.startsWith("image/") || /\.(jpe?g|png|webp|heic|bmp)$/i.test(f.name));
     const list = all.slice(0, room);
     if (all.length > room) toast.warning(`Do të përpunohen vetëm ${room} foto (limiti ${MAX_PASSPORTS}).`);
     setBusy(true);
@@ -206,6 +209,20 @@ function Index() {
     let duplicates = 0;
     let failed = 0;
     const failedNames: string[] = [];
+    const photos: { file: File; dataUrl: string }[] = [];
+    const payments = loadPayments();
+    const payHashes = new Set(payments.map((p) => p.hash));
+    const newPayments: PaymentSlip[] = [];
+
+    /** Klasifikim: së pari sipas emrit të dosjes, pastaj sipas AI. */
+    function folderKind(file: File): "passport" | "photo" | "payment" | null {
+      const path = ((file as File & { webkitRelativePath?: string }).webkitRelativePath || "").toLowerCase();
+      const dir = path.split("/").slice(0, -1).join("/");
+      if (/pages|uplat|fatur|pagesa|payment|receipt/.test(dir)) return "payment";
+      if (/biometr|foto|photo|portret/.test(dir)) return "photo";
+      if (/pasaport|passport|pasos/.test(dir)) return "passport";
+      return null;
+    }
 
 
     const CONCURRENCY = 2;
@@ -219,9 +236,25 @@ function Index() {
           try {
             if (attempt > 0) await new Promise((r) => setTimeout(r, 2000 * attempt));
             const dataUrl = await fileToDataUrl(file);
-            const record = await buildRecord(dataUrl, file.name, seen);
-            if (record) added.push(record);
-            else duplicates++;
+            const kind = folderKind(file);
+            if (kind === "photo") {
+              photos.push({ file, dataUrl: await shrinkImage(dataUrl, 700) });
+            } else if (kind === "payment") {
+              const img = await shrinkImage(dataUrl, 1200);
+              const h = await hashDataUrl(img);
+              if (payHashes.has(h)) duplicates++;
+              else {
+                payHashes.add(h);
+                newPayments.push({ id: crypto.randomUUID(), hash: h, fileName: file.name, image: img, createdAt: new Date().toISOString() });
+              }
+            } else {
+              const record = await buildRecord(dataUrl, file.name, seen);
+              if (!record) duplicates++;
+              else if (record.docType === "photo") photos.push({ file, dataUrl: await shrinkImage(dataUrl, 700) });
+              else if (record.docType === "payment") {
+                newPayments.push({ id: crypto.randomUUID(), hash: record.hash, fileName: file.name, image: record.thumbnail ?? dataUrl, createdAt: new Date().toISOString() });
+              } else added.push(record);
+            }
             ok = true;
           } catch (e) {
             if (attempt === 3) {
@@ -238,7 +271,25 @@ function Index() {
     }
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, list.length) }, worker));
 
-    persist([...[...added].reverse(), ...existing]);
+    let merged = [...[...added].reverse(), ...existing];
+    let photoMatched = 0;
+    for (const ph of photos) {
+      const key = ph.file.name.toLowerCase().replace(/\.[^.]+$/, "");
+      const tokens = key.split(/[^a-z0-9\u00c0-\u024f]+/).filter((t) => t.length > 2);
+      const hit = merged.find((r) => {
+        if (r.passportNumber && key.includes(r.passportNumber.toLowerCase())) return true;
+        const n = `${r.nameEn} ${r.nameSq}`.toLowerCase();
+        return tokens.length >= 2 && tokens.filter((t) => n.includes(t)).length >= 2;
+      });
+      if (hit) {
+        photoMatched++;
+        merged = merged.map((r) => (r.id === hit.id ? { ...r, photo: ph.dataUrl } : r));
+      }
+    }
+    persist(merged);
+    if (newPayments.length) savePayments([...newPayments, ...payments]);
+    if (photos.length) toast.info(`Fotot biometrike: ${photoMatched} nga ${photos.length} u lidhën me pasaportat.`);
+    if (newPayments.length) toast.info(`U ruajtën ${newPayments.length} fletëpagesa.`);
     setProgress(null);
     setBusy(false);
     if (fileRef.current) fileRef.current.value = "";
@@ -347,7 +398,7 @@ function Index() {
   return (
     <AppShell title="Pasaportat" subtitle="Manifesti i fluturimit" actions={actions}>
       <div className="mx-auto max-w-[1400px] space-y-6">
-        <section className="grid gap-4 sm:grid-cols-2">
+        <section className="grid gap-4 sm:grid-cols-3">
           <BigAction
             icon={<Camera className="size-10" />}
             title="Skano me kamerë"
@@ -363,11 +414,27 @@ function Index() {
             hidden
             onChange={(e) => onFiles(e.target.files)}
           />
+          <input
+            ref={folderRef}
+            type="file"
+            multiple
+            hidden
+            {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+            onChange={(e) => onFiles(e.target.files)}
+          />
           <BigAction
             icon={<Upload className="size-10" />}
             title="Ngarko foto"
             text="Ngarkim masiv deri në 600 pasaporta — fotot e njëjta anashkalohen."
             onClick={() => fileRef.current?.click()}
+            disabled={busy}
+            secondary
+          />
+          <BigAction
+            icon={<FolderUp className="size-10" />}
+            title="Ngarko dosje të plotë"
+            text="Të gjitha nëndosjet: pasaportat, fotot biometrike dhe fletëpagesat renditen vetë."
+            onClick={() => folderRef.current?.click()}
             disabled={busy}
             secondary
           />

@@ -196,3 +196,10 @@ export function saveVisas(v: Record<string, VisaInfo>) {
   try { window.localStorage.setItem(VISAS_KEY, JSON.stringify(v)); } catch { /* full */ }
   pushState(VISAS_KEY, v);
 }
+
+/* ---------- Fletëpagesat ---------- */
+
+export type PaymentSlip = { id: string; hash: string; fileName: string; image: string; personId?: string; createdAt: string };
+const PAYMENTS_KEY = "haxhi-payments-v1";
+export const loadPayments = () => read<PaymentSlip>(PAYMENTS_KEY);
+export const savePayments = (v: PaymentSlip[]) => write(PAYMENTS_KEY, v);

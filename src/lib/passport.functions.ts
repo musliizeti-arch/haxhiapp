@@ -40,6 +40,12 @@ export const extractPassport = createServerFn({ method: "POST" })
 
     const properties: Record<string, unknown> = {};
     for (const [snake] of FIELDS) properties[snake] = fieldSchema(snake);
+    properties["doc_type"] = {
+      type: "string",
+      enum: ["passport", "photo", "payment", "other"],
+      description:
+        "Type of document in the image: passport = passport/ID data page; photo = a standalone biometric portrait photo of a person (no document); payment = payment slip / bank receipt / invoice (fletëpagesë); other = anything else.",
+    };
     properties["photo_box"] = {
       type: "object",
       description:
@@ -96,7 +102,7 @@ export const extractPassport = createServerFn({ method: "POST" })
               parameters: {
                 type: "object",
                 properties,
-                required: [...FIELDS.map(([snake]) => snake), "photo_box"],
+                required: [...FIELDS.map(([snake]) => snake), "photo_box", "doc_type"],
                 additionalProperties: false,
               },
             },
@@ -144,6 +150,7 @@ export const extractPassport = createServerFn({ method: "POST" })
       birthDate: values["birthDate"] ?? "",
       sex: (values["sex"] ?? "").toUpperCase().slice(0, 1),
       residence: values["residence"] ?? "",
+      docType: (["passport", "photo", "payment", "other"].includes(parsed?.["doc_type"]) ? parsed["doc_type"] : "passport") as "passport" | "photo" | "payment" | "other",
       confidence,
       rawText,
       photoBox: (() => {
